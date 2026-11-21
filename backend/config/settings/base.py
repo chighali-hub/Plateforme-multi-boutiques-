@@ -152,9 +152,11 @@ REST_FRAMEWORK = {
     "DEFAULT_PAGINATION_CLASS": "apps.core.pagination.StandardPagination",
     "EXCEPTION_HANDLER": "apps.core.exceptions.api_exception_handler",
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    # ScopedRateThrottle n'agit que sur les vues qui declarent `throttle_scope`.
     "DEFAULT_THROTTLE_CLASSES": (
         "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",
+        "rest_framework.throttling.ScopedRateThrottle",
     ),
     "DEFAULT_THROTTLE_RATES": {
         "anon": "120/min",
@@ -175,6 +177,12 @@ SIMPLE_JWT = {
     "UPDATE_LAST_LOGIN": True,
     "AUTH_HEADER_TYPES": ("Bearer",),
 }
+
+# --- Codes OTP et reinitialisation du mot de passe (RG-03, RG-07) -------------
+OTP_CODE_TTL_SECONDS = 10 * 60
+OTP_MAX_ATTEMPTS = 5
+OTP_RESEND_COOLDOWN_SECONDS = 60
+PASSWORD_RESET_TOKEN_MAX_AGE_SECONDS = 15 * 60
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "API Plateforme multi-boutiques",

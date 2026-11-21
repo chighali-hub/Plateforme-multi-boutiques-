@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: plateforme-multi-boutiques\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-21 14:02+0000\n"
+"POT-Creation-Date: 2026-11-21 14:39+0000\n"
 "PO-Revision-Date: 2026-11-21 14:02+0000\n"
 "Last-Translator: \n"
 "Language-Team: ar\n"
@@ -43,6 +43,18 @@ msgstr "رمز للاستخدام مرة واحدة"
 
 msgid "codes à usage unique"
 msgstr "رموز للاستخدام مرة واحدة"
+
+msgid "Le code comporte 6 chiffres."
+msgstr "يتكون الرمز من 6 أرقام."
+
+msgid "Les deux mots de passe ne correspondent pas."
+msgstr "كلمتا المرور غير متطابقتين."
+
+msgid "Le mot de passe actuel est incorrect."
+msgstr "كلمة المرور الحالية غير صحيحة."
+
+msgid "La nouvelle adresse doit être différente de l'adresse actuelle."
+msgstr "يجب أن يختلف العنوان الجديد عن العنوان الحالي."
 
 msgid "recharge"
 msgstr "تجديد"
@@ -116,6 +128,9 @@ msgstr "رابط إعادة التعيين غير صالح أو منتهي ال�
 msgid "E-mail ou mot de passe incorrect."
 msgstr "البريد الإلكتروني أو كلمة المرور غير صحيحة."
 
+msgid "Session invalide ou expirée."
+msgstr "الجلسة غير صالحة أو منتهية."
+
 msgid "Votre adresse e-mail n'est pas encore vérifiée."
 msgstr "لم يتم التحقق من بريدك الإلكتروني بعد."
 
@@ -160,9 +175,6 @@ msgstr "البيانات المرسلة غير صالحة."
 
 msgid "Authentification requise."
 msgstr "تسجيل الدخول مطلوب."
-
-msgid "Session invalide ou expirée."
-msgstr "الجلسة غير صالحة أو منتهية."
 
 msgid "Vous n'avez pas accès à cette ressource."
 msgstr "ليس لديك صلاحية الوصول إلى هذا المورد."
@@ -426,3 +438,54 @@ msgstr "الفرنسية"
 
 msgid "Arabe"
 msgstr "العربية"
+
+msgid "Bonjour,"
+msgstr "مرحبًا،"
+
+#, python-format
+msgid "L'adresse e-mail de votre compte a été remplacée par %(new_email)s."
+msgstr "تم تغيير البريد الإلكتروني لحسابك إلى %(new_email)s."
+
+msgid ""
+"Si vous n'êtes pas à l'origine de ce changement, contactez immédiatement "
+"l'administrateur de la plateforme."
+msgstr "إذا لم تقم بهذا التغيير، فتواصل فورًا مع مسؤول المنصة."
+
+msgid "Votre adresse e-mail a été modifiée"
+msgstr "تم تغيير بريدك الإلكتروني"
+
+#, python-format
+msgid "Votre code pour confirmer cette nouvelle adresse est : %(code)s"
+msgstr "رمز تأكيد عنوانك الجديد هو: %(code)s"
+
+#, python-format
+msgid "Ce code est valable %(minutes)s minutes. Ne le communiquez à personne."
+msgstr "هذا الرمز صالح لمدة %(minutes)s دقائق. لا تشاركه مع أي شخص."
+
+msgid "Si vous n'avez pas demandé ce changement, ignorez ce message."
+msgstr "إذا لم تطلب هذا التغيير، فتجاهل هذه الرسالة."
+
+msgid "Confirmez votre nouvelle adresse e-mail"
+msgstr "أكّد بريدك الإلكتروني الجديد"
+
+#, python-format
+msgid "Votre code pour réinitialiser votre mot de passe est : %(code)s"
+msgstr "رمز إعادة تعيين كلمة المرور هو: %(code)s"
+
+msgid ""
+"Si vous n'avez pas demandé de réinitialisation, ignorez ce message : votre "
+"mot de passe reste inchangé."
+msgstr "إذا لم تطلب إعادة التعيين، فتجاهل هذه الرسالة: كلمة مرورك لم تتغير."
+
+msgid "Réinitialisation de votre mot de passe"
+msgstr "إعادة تعيين كلمة المرور"
+
+#, python-format
+msgid "Votre code de vérification est : %(code)s"
+msgstr "رمز التحقق الخاص بك هو: %(code)s"
+
+msgid "Si vous n'avez pas créé de boutique, ignorez ce message."
+msgstr "إذا لم تقم بإنشاء متجر، فتجاهل هذه الرسالة."
+
+msgid "Votre code de vérification"
+msgstr "رمز التحقق الخاص بك"
