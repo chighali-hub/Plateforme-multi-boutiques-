@@ -117,7 +117,12 @@ Chaque code de [03-reference-api.md §0.5](03-reference-api.md) a sa classe dans
 ### 4.1 JWT
 - `djangorestframework-simplejwt` avec rotation et liste noire (`rest_framework_simplejwt.token_blacklist`, déjà installé).
 - Le jeton `access` contient `user_id` et `role`. L'état de la boutique **n'est pas** dans le jeton : il est vérifié en base à chaque requête (il peut changer à tout moment).
-- Invalider toutes les sessions d'un utilisateur (`apps.accounts.services.revoke_all_sessions(user)`) : mettre en liste noire tous ses `OutstandingToken` non expirés. Utilisé par : réinitialisation du mot de passe, changement de mot de passe, blocage.
+- Module `apps.accounts.tokens` :
+  - `issue_tokens(user)` : paire `access`/`refresh` (le `refresh` porte `role`, recopié dans l'`access`) ;
+  - `rotate_refresh_token(raw, check_user)` : rotation **sous verrou de ligne** (`select_for_update` sur l'`OutstandingToken`). La rotation fournie par simplejwt laisse deux rafraîchissements simultanés du même jeton réussir tous les deux ; le verrou ferme cette fenêtre. `check_user` refuse une boutique bloquée ou expirée **avant** toute révocation ;
+  - `revoke_refresh_token(raw, user)` : déconnexion, seulement pour un jeton de l'utilisateur connecté ;
+  - `revoke_all_sessions(user)` : met en liste noire tous ses `OutstandingToken` non expirés. Utilisé par : réinitialisation du mot de passe, changement de mot de passe, blocage (phase 4).
+- Codes OTP (`apps.accounts.otp`) : `issue_otp`, `verify_otp(user, purpose, code, consume=True)`, `seconds_until_resend`. **`verify_otp` s'appelle hors de toute transaction de l'appelant** : dans un bloc `atomic` englobant, le compteur d'essais serait annulé avec lui et la limite de 5 essais deviendrait contournable. Durées et limites : `OTP_CODE_TTL_SECONDS`, `OTP_MAX_ATTEMPTS`, `OTP_RESEND_COOLDOWN_SECONDS`, `PASSWORD_RESET_TOKEN_MAX_AGE_SECONDS` dans `config/settings/base.py`.
 
 ### 4.2 Classes de permission (`apps/core/permissions.py`)
 
@@ -126,6 +131,7 @@ Chaque code de [03-reference-api.md §0.5](03-reference-api.md) a sa classe dans
 | `IsPlatformAdmin` | Authentifié et `role = ADMIN` ; sinon `403 PERMISSION_DENIED` |
 | `IsShopOwner` | Authentifié, `role = SHOP` et possède une boutique ; puis bloquée → `SHOP_BLOCKED`, expirée → `SHOP_EXPIRED` |
 | `ShopStateAllowed(*states)` | État de la boutique dans la liste ; sinon `403 SHOP_STATE_FORBIDDEN` |
+| `IsActiveAccount` | Endpoints « TOUS » (`/auth/me/`, `/account/*`, `/notifications/*`) : authentifié ; une boutique bloquée ou expirée reçoit `SHOP_BLOCKED` / `SHOP_EXPIRED`. Place `request.shop` si l'utilisateur en possède une |
 
 Utilisation, en reprenant **exactement** la matrice de [03-reference-api.md §0.3](03-reference-api.md) :
 
@@ -152,7 +158,7 @@ C'est la règle de sécurité la plus importante du projet.
 - Chaque endpoint de l'espace boutique a un test d'isolation (voir [06-strategie-de-tests.md](06-strategie-de-tests.md) §4).
 
 ### 4.4 Limitation de débit
-Les limites sont déclarées dans `REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]` et appliquées avec `ScopedRateThrottle` (`throttle_scope = "auth"`, `"otp"`, `"order_submit"`…). Les valeurs sont celles de [03-reference-api.md](03-reference-api.md) ; les portées déjà déclarées dans `config/settings/base.py` sont `auth` (10/min), `admin_auth` (5/min), `otp` (5/min), `order_submit` (5/h) et `order_track` (30/min). La limite « 10 commandes/jour par téléphone » est une classe dédiée (`PhoneRateThrottle`) dont la clé est le numéro normalisé.
+Les limites sont déclarées dans `REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]` et appliquées avec `ScopedRateThrottle` (`throttle_scope = "auth"`, `"otp"`, `"order_submit"`…). `ScopedRateThrottle` fait partie des classes par défaut : une vue n'a qu'à déclarer `throttle_scope`. Les valeurs sont celles de [03-reference-api.md](03-reference-api.md) ; les portées déjà déclarées dans `config/settings/base.py` sont `auth` (10/min), `admin_auth` (5/min), `otp` (5/min), `order_submit` (5/h) et `order_track` (30/min). La limite « 10 commandes/jour par téléphone » est une classe dédiée (`PhoneRateThrottle`) dont la clé est le numéro normalisé.
 
 ---
 
