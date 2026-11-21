@@ -63,6 +63,12 @@ class InvalidCredentials(BusinessError):
     default_message = _("E-mail ou mot de passe incorrect.")
 
 
+class TokenInvalid(BusinessError):
+    status_code = status.HTTP_401_UNAUTHORIZED
+    code = "TOKEN_INVALID"
+    default_message = _("Session invalide ou expirée.")
+
+
 # --- 403 ------------------------------------------------------------------------
 class EmailNotVerified(BusinessError):
     status_code = status.HTTP_403_FORBIDDEN

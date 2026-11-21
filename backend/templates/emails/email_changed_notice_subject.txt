@@ -1,0 +1,1 @@
+{% load i18n %}{% translate "Votre adresse e-mail a été modifiée" %}

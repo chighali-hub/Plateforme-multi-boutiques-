@@ -104,3 +104,23 @@ class ShopStateAllowed(BasePermission):
         if state not in self.states:
             raise ShopStateForbidden(details={"state": state})
         return True
+
+
+class IsActiveAccount(BasePermission):
+    """Tout utilisateur authentifie (endpoints TOUS de la reference).
+
+    Une boutique bloquee ou expiree est refusee partout (03-reference-api.md
+    section 0.3) : SHOP_BLOCKED ou SHOP_EXPIRED. Place la boutique dans
+    `request.shop` quand l'utilisateur en possede une.
+    """
+
+    def has_permission(self, request, view) -> bool:
+        user = request.user
+        if not (user and user.is_authenticated):
+            return False
+        if user.role == User.Role.SHOP:
+            shop = Shop.objects.select_related("owner").filter(owner_id=user.pk).first()
+            if shop is not None:
+                ensure_shop_not_locked(shop)
+                request.shop = shop
+        return True

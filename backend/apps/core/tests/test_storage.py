@@ -86,3 +86,15 @@ def test_delete_file_on_commit_keeps_file_on_rollback(django_capture_on_commit_c
             raise RuntimeError("echec")
     assert callbacks == []
     assert default_storage.exists(name)
+
+
+@pytest.mark.django_db
+def test_private_webp_is_served_as_image():
+    """Sans /etc/mime.types, Python 3.12 ne connait pas .webp : avec nosniff, le
+    navigateur refuserait alors d'afficher l'image."""
+    storage = PrivateMediaStorage()
+    name = storage.save("id_cards/carte.webp", ContentFile(b"RIFF....WEBP"))
+    field = Shop._meta.get_field("id_card_front")
+    response = private_file_response(field.attr_class(None, field, name))
+    assert response["Content-Type"] == "image/webp"
+    response.close()

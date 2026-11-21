@@ -421,7 +421,7 @@ Connexion de l'administrateur (page dédiée). Limite : 5 requêtes/minute par I
 {"access": "eyJ...", "refresh": "eyJ..."}
 ```
 
-**Erreurs** : `401 TOKEN_INVALID`. Pour une boutique bloquée ou expirée, le rafraîchissement renvoie `403 SHOP_BLOCKED` / `403 SHOP_EXPIRED`.
+**Erreurs** : `400 VALIDATION_ERROR` (champ absent ou vide), `401 TOKEN_INVALID` (jeton invalide, expiré, déjà utilisé ou révoqué ; compte désactivé). Pour une boutique bloquée ou expirée, le rafraîchissement renvoie `403 SHOP_BLOCKED` / `403 SHOP_EXPIRED` et le jeton n'est **pas** consommé : il redevient utilisable après déblocage ou recharge.
 
 ---
 
@@ -432,7 +432,7 @@ Invalide le `refresh` (liste noire).
 {"refresh": "eyJ..."}
 ```
 
-**204** sans corps. **Erreurs** : `401 TOKEN_INVALID`.
+**204** sans corps. **Erreurs** : `401 AUTHENTICATION_REQUIRED` (pas de jeton `access`), `401 TOKEN_INVALID` (jeton `refresh` invalide ou appartenant à un autre utilisateur).
 
 ---
 
@@ -1570,4 +1570,4 @@ Il n'existe pas d'endpoint pour créer un admin. On utilise la commande (phase 2
 docker compose exec backend python manage.py create_admin --email admin@plateforme.mr
 ```
 
-La commande demande le mot de passe deux fois (saisie masquée) et crée un utilisateur `role = ADMIN`, `is_email_verified = true`.
+La commande demande le mot de passe deux fois (saisie masquée) et crée un utilisateur `role = ADMIN`, `is_email_verified = true`. Le mot de passe suit la politique RG-06 ; après trois saisies refusées, la commande s'arrête sans rien créer. Une adresse déjà utilisée est refusée.

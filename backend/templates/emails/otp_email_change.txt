@@ -1,0 +1,7 @@
+{% load i18n %}{% translate "Bonjour," %}
+
+{% blocktranslate %}Votre code pour confirmer cette nouvelle adresse est : {{ code }}{% endblocktranslate %}
+
+{% blocktranslate %}Ce code est valable {{ minutes }} minutes. Ne le communiquez à personne.{% endblocktranslate %}
+
+{% translate "Si vous n'avez pas demandé ce changement, ignorez ce message." %}
