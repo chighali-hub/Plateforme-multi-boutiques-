@@ -233,7 +233,7 @@ docker compose down -v                                               # arrêter 
 | 7 | Site public et recherche | `feat/phase-7-site-public` |
 | 8 | Commandes, paiement et tableau de bord boutique | `feat/phase-8-commandes` |
 
-Chaque branche part de `dev` et revient dans `dev` par une demande de fusion relue. Personne ne pousse directement sur `main` ni sur `dev`. Règles complètes : [08-regles-du-travail.md](docs/Documentation-API/08-regles-du-travail.md).
+Chaque branche part de `dev` et revient dans `dev` par une demande de fusion (PR), fusionnable dès que la CI est verte. Personne ne pousse directement sur `main` ni sur `dev`. Règles complètes : [08-regles-du-travail.md](docs/Documentation-API/08-regles-du-travail.md).
 
 ---
 

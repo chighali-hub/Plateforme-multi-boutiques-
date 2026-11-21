@@ -26,7 +26,7 @@ dev  ──●──────────●──────────●
 | Branche | Rôle | Qui y écrit |
 |---|---|---|
 | `main` | Version stable, livrée | **Uniquement** par une demande de fusion `dev → main`, ouverte et fusionnée par le responsable du dépôt après validation de l'équipe |
-| `dev` | Intégration de toutes les phases | **Uniquement** par des demandes de fusion relues et approuvées |
+| `dev` | Intégration de toutes les phases | **Uniquement** par des demandes de fusion dont la CI est verte |
 | `feat/phase-N-<nom>` | Travail d'une phase ([02-phases.md](02-phases.md)) | Le développeur de la phase |
 | `fix/<description-courte>` | Correction d'un bogue trouvé sur `dev` | N'importe quel développeur |
 | `refactor/<description-courte>` | Restructuration du code sans changement de comportement | N'importe quel développeur |
@@ -47,7 +47,7 @@ Règles :
 ### 1.1 Mise en place (une seule fois, par le responsable du dépôt)
 1. Créer `dev` depuis `main`.
 2. Protéger `main` et `dev` (*Settings → Branches*) :
-   - demande de fusion obligatoire avec au moins **1 approbation** ; une approbation est annulée si de nouveaux commits sont poussés ;
+   - demande de fusion obligatoire, **sans approbation exigée** : l'auteur de la PR peut la fusionner lui-même ;
    - vérifications obligatoires : `lint`, `test` et `build`, sur une branche à jour avec la cible ;
    - conversations de revue résolues avant la fusion ;
    - règles appliquées aussi aux administrateurs ;
@@ -158,7 +158,7 @@ Aucun. (ou : liste des écarts et mise à jour de la documentation correspondant
 
 ### 4.3 Règles de fusion
 - Cible : **`dev`** (jamais `main` pour une branche de travail).
-- Au moins **une approbation** d'un autre développeur.
+- Aucune approbation n'est exigée : l'auteur peut fusionner sa propre PR. Une relecture par un autre développeur reste **recommandée** pour les changements importants (modèles, sécurité, `core`).
 - Toutes les vérifications du [§7 de la stratégie de tests](06-strategie-de-tests.md) réussies.
 - Branche à jour avec `dev`.
 - Fusion par **squash** pour garder un historique lisible sur `dev`. Le message du squash respecte le §3.
@@ -171,7 +171,7 @@ Uniquement par le responsable du dépôt, quand l'équipe a validé un ensemble 
 
 ## 5. La revue de code
 
-Le relecteur vérifie, dans cet ordre :
+La relecture n'est pas bloquante (aucune approbation exigée), mais elle est recommandée. Quand une relecture est demandée, le relecteur vérifie, dans cet ordre :
 
 1. **Conformité** à [03-reference-api.md](03-reference-api.md) et [04-schema-base-de-donnees.md](04-schema-base-de-donnees.md).
 2. **Sécurité** : la liste de contrôle de [07-securite.md §11](07-securite.md).
