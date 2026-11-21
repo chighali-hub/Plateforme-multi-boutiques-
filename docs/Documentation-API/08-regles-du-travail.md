@@ -239,7 +239,7 @@ Fichier : [`.github/workflows/ci-backend.yml`](../../.github/workflows/ci-backen
 | Déclenchement | Uniquement sur un **push** vers `dev`, `main`, `feat/**`, `fix/**`, `refactor/**`, `chore/**`, `sec/**`, `perf/**`, `test/**` |
 | Pull requests | La CI ne se relance **pas** à l'ouverture d'une PR : les résultats du dernier push de la branche s'affichent directement dans la PR (même commit) |
 | Job `lint` | `ruff check` et `ruff format --check` |
-| Job `test` | PostgreSQL 16 en service, `makemigrations --check`, `pytest` avec couverture minimale de 80 % |
+| Job `test` | PostgreSQL 16 en service, `makemigrations --check`, catalogue de traductions à jour (`makemessages` ne doit rien changer), `pytest` avec couverture minimale de 80 % |
 | Job `build` | Construction de l'image Docker du backend et validation de `docker-compose.yml` (après `lint` et `test`) |
 | Fusion | Les trois jobs doivent être verts : ce sont des vérifications obligatoires sur `main` et `dev` |
 | Pushs successifs | Un nouveau push sur la même branche annule l'exécution précédente encore en cours |

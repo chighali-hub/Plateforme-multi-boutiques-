@@ -68,6 +68,10 @@ backend/
 | `fake_image_file` | Un fichier texte renommé `.jpg` (doit être refusé) |
 | `freeze_now` | Fixe l'heure (avec `unittest.mock.patch` de `django.utils.timezone.now`) pour les tests d'expiration et de revenus |
 
+Autres règles communes :
+- Chaque test écrit ses fichiers dans un dossier temporaire et part d'un cache vide (fixture automatique de `conftest.py`).
+- **Ne pas utiliser `@pytest.mark.django_db(transaction=True)`** : ces tests vident les tables en fin d'exécution, y compris les lignes créées par les migrations de données (paramètres de la plateforme, modèles de design), et les tests suivants échouent selon l'ordre d'exécution. Pour un effet déclenché par `transaction.on_commit`, utiliser la fixture `django_capture_on_commit_callbacks(execute=True)`. La règle est bloquante : `backend/conftest.py` refuse la collecte de tout test transactionnel (marqueur ou fixture `transactional_db`).
+
 ### 3.2 Nommage
 `test_<sujet>_<condition>_<résultat attendu>` :
 

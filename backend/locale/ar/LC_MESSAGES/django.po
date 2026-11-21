@@ -1,0 +1,428 @@
+# Catalogue arabe du backend de la plateforme multi-boutiques.
+msgid ""
+msgstr ""
+"Project-Id-Version: plateforme-multi-boutiques\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-11-21 14:02+0000\n"
+"PO-Revision-Date: 2026-11-21 14:02+0000\n"
+"Last-Translator: \n"
+"Language-Team: ar\n"
+"Language: ar\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=6; plural=n==0 ? 0 : n==1 ? 1 : n==2 ? 2 : n%100>=3 "
+"&& n%100<=10 ? 3 : n%100>=11 && n%100<=99 ? 4 : 5;\n"
+
+msgid "Administrateur"
+msgstr "المسؤول"
+
+msgid "Boutique"
+msgstr "متجر"
+
+msgid "e-mail"
+msgstr "البريد الإلكتروني"
+
+msgid "utilisateur"
+msgstr "مستخدم"
+
+msgid "utilisateurs"
+msgstr "المستخدمون"
+
+msgid "Inscription"
+msgstr "التسجيل"
+
+msgid "Réinitialisation du mot de passe"
+msgstr "إعادة تعيين كلمة المرور"
+
+msgid "Changement d'e-mail"
+msgstr "تغيير البريد الإلكتروني"
+
+msgid "code à usage unique"
+msgstr "رمز للاستخدام مرة واحدة"
+
+msgid "codes à usage unique"
+msgstr "رموز للاستخدام مرة واحدة"
+
+msgid "recharge"
+msgstr "تجديد"
+
+msgid "recharges"
+msgstr "التجديدات"
+
+msgid "catégorie"
+msgstr "فئة"
+
+msgid "catégories"
+msgstr "الفئات"
+
+msgid "En attente"
+msgstr "قيد الانتظار"
+
+msgid "En cours"
+msgstr "قيد المعالجة"
+
+msgid "Terminé"
+msgstr "مكتمل"
+
+msgid "Échoué"
+msgstr "فشل"
+
+msgid "import de produits"
+msgstr "استيراد المنتجات"
+
+msgid "imports de produits"
+msgstr "عمليات استيراد المنتجات"
+
+msgid "Brouillon"
+msgstr "مسودة"
+
+msgid "Publié"
+msgstr "منشور"
+
+msgid "Saisie manuelle"
+msgstr "إدخال يدوي"
+
+msgid "Import"
+msgstr "استيراد"
+
+msgid "produit"
+msgstr "منتج"
+
+msgid "produits"
+msgstr "المنتجات"
+
+msgid "ligne d'import en erreur"
+msgstr "سطر استيراد به خطأ"
+
+msgid "lignes d'import en erreur"
+msgstr "أسطر استيراد بها أخطاء"
+
+msgid "Opération impossible."
+msgstr "لا يمكن إجراء هذه العملية."
+
+msgid "Le code saisi est incorrect."
+msgstr "الرمز المدخل غير صحيح."
+
+msgid "Ce code a expiré ou n'est plus valable. Demandez un nouveau code."
+msgstr "انتهت صلاحية هذا الرمز أو لم يعد صالحًا. اطلب رمزًا جديدًا."
+
+msgid "Trop d'essais incorrects. Demandez un nouveau code."
+msgstr "عدد كبير من المحاولات الخاطئة. اطلب رمزًا جديدًا."
+
+msgid "Ce lien de réinitialisation est invalide ou a expiré."
+msgstr "رابط إعادة التعيين غير صالح أو منتهي الصلاحية."
+
+msgid "E-mail ou mot de passe incorrect."
+msgstr "البريد الإلكتروني أو كلمة المرور غير صحيحة."
+
+msgid "Votre adresse e-mail n'est pas encore vérifiée."
+msgstr "لم يتم التحقق من بريدك الإلكتروني بعد."
+
+msgid "Ce compte est bloqué. Contactez l'administrateur."
+msgstr "هذا الحساب محظور. تواصل مع المسؤول."
+
+msgid "Ce compte a expiré. Pour le recharger, contactez l'administrateur."
+msgstr "انتهت صلاحية هذا الحساب. لتجديده، تواصل مع المسؤول."
+
+msgid "Cette action n'est pas disponible dans l'état actuel de la boutique."
+msgstr "هذا الإجراء غير متاح في الحالة الحالية للمتجر."
+
+msgid "Cette adresse e-mail est déjà utilisée."
+msgstr "هذا البريد الإلكتروني مستخدم بالفعل."
+
+msgid "Cette adresse e-mail est déjà vérifiée."
+msgstr "تم التحقق من هذا البريد الإلكتروني بالفعل."
+
+msgid "Cette action n'est pas possible dans l'état actuel."
+msgstr "هذا الإجراء غير ممكن في الحالة الحالية."
+
+msgid "Cette étape de l'inscription n'est pas disponible maintenant."
+msgstr "هذه المرحلة من التسجيل غير متاحة الآن."
+
+msgid "La limite autorisée est atteinte."
+msgstr "تم بلوغ الحد المسموح به."
+
+msgid "Un import est déjà en cours."
+msgstr "هناك عملية استيراد جارية بالفعل."
+
+msgid "Certains produits du panier ne sont plus disponibles."
+msgstr "بعض منتجات السلة لم تعد متوفرة."
+
+msgid "Le fichier est trop volumineux."
+msgstr "حجم الملف كبير جدًا."
+
+msgid "Veuillez patienter avant de demander un nouveau code."
+msgstr "يرجى الانتظار قبل طلب رمز جديد."
+
+msgid "Les données envoyées sont invalides."
+msgstr "البيانات المرسلة غير صالحة."
+
+msgid "Authentification requise."
+msgstr "تسجيل الدخول مطلوب."
+
+msgid "Session invalide ou expirée."
+msgstr "الجلسة غير صالحة أو منتهية."
+
+msgid "Vous n'avez pas accès à cette ressource."
+msgstr "ليس لديك صلاحية الوصول إلى هذا المورد."
+
+msgid "Ressource introuvable."
+msgstr "المورد غير موجود."
+
+msgid "Méthode non autorisée."
+msgstr "الطريقة غير مسموح بها."
+
+msgid "Format de requête non pris en charge."
+msgstr "صيغة الطلب غير مدعومة."
+
+msgid "Format de réponse non disponible."
+msgstr "صيغة الرد غير متاحة."
+
+msgid "Trop de requêtes. Réessayez plus tard."
+msgstr "طلبات كثيرة جدًا. أعد المحاولة لاحقًا."
+
+msgid "Une erreur inattendue est survenue."
+msgstr "حدث خطأ غير متوقع."
+
+msgid "paramètres de la plateforme"
+msgstr "إعدادات المنصة"
+
+msgid "Paramètres de la plateforme"
+msgstr "إعدادات المنصة"
+
+msgid "Boutique soumise"
+msgstr "تم إرسال المتجر"
+
+msgid "Boutique soumise à nouveau"
+msgstr "تمت إعادة إرسال المتجر"
+
+msgid "Boutique validée"
+msgstr "تم قبول المتجر"
+
+msgid "Boutique refusée"
+msgstr "تم رفض المتجر"
+
+msgid "Boutique bloquée"
+msgstr "تم حظر المتجر"
+
+msgid "Boutique débloquée"
+msgstr "تم رفع الحظر عن المتجر"
+
+msgid "Boutique rechargée"
+msgstr "تم تجديد المتجر"
+
+msgid "Produit retiré par l'administrateur"
+msgstr "منتج سحبه المسؤول"
+
+msgid "Paramètres modifiés"
+msgstr "تم تعديل الإعدادات"
+
+msgid "Connexion administrateur"
+msgstr "دخول المسؤول"
+
+msgid "Mot de passe réinitialisé"
+msgstr "تمت إعادة تعيين كلمة المرور"
+
+msgid "E-mail modifié"
+msgstr "تم تغيير البريد الإلكتروني"
+
+msgid "entrée d'audit"
+msgstr "سجل تدقيق"
+
+msgid "journal d'audit"
+msgstr "سجل التدقيق"
+
+#, python-format
+msgid ""
+"Bonjour, je souhaite recharger le compte de la boutique %(name)s (%(email)s)."
+msgstr "مرحبًا، أرغب في تجديد حساب المتجر %(name)s (%(email)s)."
+
+msgid "Saisissez un numéro mauritanien de 8 chiffres commençant par 2, 3 ou 4."
+msgstr "أدخل رقمًا موريتانيًا من 8 أرقام يبدأ بـ 2 أو 3 أو 4."
+
+msgid "Saisissez une couleur au format #RRGGBB."
+msgstr "أدخل لونًا بصيغة ‎#RRGGBB."
+
+msgid "Le fichier doit être une image JPEG, PNG ou WebP valide."
+msgstr "يجب أن يكون الملف صورة صالحة بصيغة JPEG أو PNG أو WebP."
+
+msgid "L'image dépasse les dimensions autorisées."
+msgstr "أبعاد الصورة تتجاوز الحد المسموح به."
+
+msgid "Nouvelle boutique à valider"
+msgstr "متجر جديد بانتظار القبول"
+
+msgid "Compte rechargé"
+msgstr "تم تجديد الحساب"
+
+msgid "Rappel d'expiration"
+msgstr "تذكير بانتهاء الصلاحية"
+
+msgid "Nouvelle commande"
+msgstr "طلب جديد"
+
+msgid "Import terminé"
+msgstr "اكتمل الاستيراد"
+
+msgid "Import échoué"
+msgstr "فشل الاستيراد"
+
+msgid "Produit retiré"
+msgstr "تم سحب المنتج"
+
+msgid "notification"
+msgstr "إشعار"
+
+msgid "notifications"
+msgstr "الإشعارات"
+
+#, python-format
+msgid "La boutique %(shop_name)s attend votre validation."
+msgstr "المتجر %(shop_name)s بانتظار قبولك."
+
+#, python-format
+msgid "La boutique %(shop_name)s a renvoyé sa demande de validation."
+msgstr "أعاد المتجر %(shop_name)s إرسال طلب القبول."
+
+#, python-format
+msgid "Votre boutique est validée. Elle est active jusqu'au %(expires_at)s."
+msgstr "تم قبول متجرك. وهو نشط حتى %(expires_at)s."
+
+msgid "Demande refusée"
+msgstr "تم رفض الطلب"
+
+#, python-format
+msgid "Votre demande a été refusée : %(reason)s"
+msgstr "تم رفض طلبك: %(reason)s"
+
+msgid "Votre boutique a été débloquée."
+msgstr "تم رفع الحظر عن متجرك."
+
+#, python-format
+msgid "Votre compte est rechargé jusqu'au %(new_expires_at)s."
+msgstr "تم تجديد حسابك حتى %(new_expires_at)s."
+
+msgid "Votre compte expire bientôt"
+msgstr "تنتهي صلاحية حسابك قريبًا"
+
+#, python-format
+msgid "Votre compte expire dans %(days_left)s jour, le %(expires_at)s."
+msgid_plural "Votre compte expire dans %(days_left)s jours, le %(expires_at)s."
+msgstr[0] "تنتهي صلاحية حسابك اليوم، %(expires_at)s."
+msgstr[1] "تنتهي صلاحية حسابك خلال يوم واحد، في %(expires_at)s."
+msgstr[2] "تنتهي صلاحية حسابك خلال يومين، في %(expires_at)s."
+msgstr[3] "تنتهي صلاحية حسابك خلال %(days_left)s أيام، في %(expires_at)s."
+msgstr[4] "تنتهي صلاحية حسابك خلال %(days_left)s يومًا، في %(expires_at)s."
+msgstr[5] "تنتهي صلاحية حسابك خلال %(days_left)s يوم، في %(expires_at)s."
+
+#, python-format
+msgid "Commande %(reference)s de %(customer_name)s : %(total_amount)s MRU."
+msgstr "الطلب %(reference)s من %(customer_name)s: %(total_amount)s أوقية."
+
+#, python-format
+msgid ""
+"Produits créés en brouillon : %(success_count)s. Lignes en erreur : "
+"%(error_count)s."
+msgstr ""
+"المنتجات المنشأة كمسودات: %(success_count)s. الأسطر التي بها أخطاء: "
+"%(error_count)s."
+
+#, python-format
+msgid "L'import n'a pas pu être traité : %(failure_reason)s"
+msgstr "تعذرت معالجة الاستيراد: %(failure_reason)s"
+
+#, python-format
+msgid ""
+"Le produit %(product_name)s a été retiré par l'administrateur : %(reason)s"
+msgstr "سحب المسؤول المنتج %(product_name)s: %(reason)s"
+
+msgid "Notification"
+msgstr "إشعار"
+
+msgid "Nouvelle"
+msgstr "جديد"
+
+msgid "Confirmée"
+msgstr "مؤكد"
+
+msgid "Livrée"
+msgstr "تم التسليم"
+
+msgid "Refusée"
+msgstr "مرفوض"
+
+msgid "commande"
+msgstr "طلب"
+
+msgid "commandes"
+msgstr "الطلبات"
+
+msgid "ligne de commande"
+msgstr "سطر طلب"
+
+msgid "lignes de commande"
+msgstr "أسطر الطلب"
+
+msgid "Grille"
+msgstr "شبكة"
+
+msgid "Liste"
+msgstr "قائمة"
+
+msgid "Magazine"
+msgstr "مجلة"
+
+msgid "Minimal"
+msgstr "بسيط"
+
+msgid "modèle de design"
+msgstr "نموذج تصميم"
+
+msgid "modèles de design"
+msgstr "نماذج التصميم"
+
+msgid "Inscription en cours"
+msgstr "التسجيل جارٍ"
+
+msgid "En attente de validation"
+msgstr "بانتظار القبول"
+
+msgid "Active"
+msgstr "نشط"
+
+msgid "Expirée"
+msgstr "منتهي الصلاحية"
+
+msgid "Bloquée"
+msgstr "محظور"
+
+msgid "Vérification de l'e-mail"
+msgstr "التحقق من البريد الإلكتروني"
+
+msgid "Choix du design"
+msgstr "اختيار التصميم"
+
+msgid "Acceptation des conditions"
+msgstr "قبول الشروط"
+
+msgid "Validée"
+msgstr "مقبول"
+
+msgid "boutique"
+msgstr "متجر"
+
+msgid "boutiques"
+msgstr "المتاجر"
+
+msgid "compte bancaire"
+msgstr "حساب بنكي"
+
+msgid "comptes bancaires"
+msgstr "الحسابات البنكية"
+
+msgid "Francais"
+msgstr "الفرنسية"
+
+msgid "Arabe"
+msgstr "العربية"

@@ -108,6 +108,14 @@ jobs:
       - name: Verifier qu'aucune migration ne manque
         run: python manage.py makemigrations --check --dry-run
 
+      # Tout texte traduisible du code doit etre dans le catalogue arabe,
+      # traduit et compile (la parite est verifiee par apps/core/tests/test_translations.py).
+      - name: Verifier que le catalogue de traductions est a jour
+        run: |
+          python manage.py makemessages -l ar --no-location --no-obsolete \
+            --ignore "apps/*/tests/*" --ignore "test_media/*" --ignore "test_private_media/*"
+          git diff --exit-code -I '^"POT-Creation-Date' -- locale/
+
       - name: Lancer les tests avec couverture (minimum 80 %)
         run: pytest --create-db --cov --cov-report=term-missing
 
