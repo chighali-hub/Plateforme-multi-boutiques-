@@ -42,7 +42,7 @@ Règles :
 - Une branche de travail (`feat/*`, `fix/*`, `refactor/*`, `chore/*`, `sec/*`, `perf/*`, `test/*`) n'est **jamais** fusionnée dans `main`.
 - Personne ne pousse directement sur `main` ni sur `dev`.
 - Une branche = une phase (ou une correction). On ne mélange pas deux sujets dans la même branche.
-- Les branches fusionnées sont supprimées après la fusion.
+- **Une branche créée n'est jamais supprimée**, ni sur GitHub ni en local, même après la fusion de sa PR : les branches de travail sont conservées comme historique du projet. Lors de la fusion, ne pas cocher « Delete branch » sur GitHub et ne pas utiliser `--delete-branch` ni `git branch -D`.
 
 ### 1.1 Mise en place (une seule fois, par le responsable du dépôt)
 1. Créer `dev` depuis `main`.
@@ -78,6 +78,11 @@ git rebase origin/dev
 git push -u origin feat/phase-3-espace-boutique
 
 # 6. Ouvrir une demande de fusion vers dev (jamais vers main)
+
+# 7. Après la fusion de la PR : revenir sur dev et le mettre à jour
+#    (la branche de travail est conservée, on ne la supprime pas)
+git switch dev
+git pull --ff-only origin dev
 ```
 
 - `git rebase` uniquement sur **sa propre** branche, jamais sur `dev` ou `main`.
