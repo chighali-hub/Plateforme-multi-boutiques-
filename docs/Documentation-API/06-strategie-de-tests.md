@@ -17,6 +17,8 @@
 
 Paramètres de test (`config/settings/test.py`, déjà en place) : hachage de mot de passe rapide, cache mémoire, e-mails en mémoire, **Celery exécuté immédiatement** (`CELERY_TASK_ALWAYS_EAGER`), limitations de débit désactivées, dossiers de fichiers séparés (`test_media/`, `test_private_media/`).
 
+Ces paramètres sont imposés par l'option `--ds=config.settings.test` de `backend/pytest.ini`. Elle l'emporte sur la variable `DJANGO_SETTINGS_MODULE` du fichier `.env` (qui vaut `config.settings.dev` dans les conteneurs) : `docker compose exec backend pytest` donne donc le même résultat que la CI. Le test `apps/core/tests/test_settings.py` échoue si ce n'est plus le cas.
+
 Les tests utilisent **PostgreSQL** (comme la production), jamais SQLite : la recherche (`pg_trgm`, `unaccent`, `fuzzystrmatch`) et les contraintes en dépendent.
 
 ---
