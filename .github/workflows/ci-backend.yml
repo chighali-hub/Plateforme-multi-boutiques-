@@ -1,0 +1,139 @@
+# CI du backend Django.
+# Declenchement : uniquement sur un push vers les branches listees ci-dessous.
+# Pas de declenchement sur les pull requests : les resultats du push de la
+# branche (meme commit) s'affichent directement dans la pull request.
+
+name: CI backend
+
+on:
+  push:
+    branches:
+      - 'dev'
+      - 'main'
+      - 'feat/**'
+      - 'fix/**'
+      - 'refactor/**'
+      - 'chore/**'
+      - 'sec/**'
+      - 'perf/**'
+      - 'test/**'
+
+# Un nouveau push sur la meme branche annule l'execution precedente.
+concurrency:
+  group: ci-backend-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: '3.12'
+
+defaults:
+  run:
+    working-directory: backend
+
+jobs:
+  lint:
+    name: lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Recuperer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Installer ruff (version figee dans requirements-dev.txt)
+        run: pip install "$(grep -E '^ruff==' requirements-dev.txt)"
+
+      - name: Analyse statique
+        run: ruff check . --output-format=github
+
+      - name: Verification du formatage
+        run: ruff format --check .
+
+  test:
+    name: test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: plateforme
+          POSTGRES_USER: plateforme
+          POSTGRES_PASSWORD: plateforme
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U plateforme -d plateforme"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DJANGO_SETTINGS_MODULE: config.settings.test
+      DJANGO_SECRET_KEY: cle-de-test-ci-uniquement-sans-valeur-en-production-0123456789
+      POSTGRES_DB: plateforme
+      POSTGRES_USER: plateforme
+      POSTGRES_PASSWORD: plateforme
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: '5432'
+    steps:
+      - name: Recuperer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+
+      - name: Installer les outils systeme
+        working-directory: .
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends gettext
+
+      - name: Installer les dependances
+        run: pip install -r requirements-dev.txt
+
+      - name: Verifier la configuration Django
+        run: python manage.py check
+
+      - name: Verifier qu'aucune migration ne manque
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Lancer les tests avec couverture (minimum 80 %)
+        run: pytest --create-db --cov --cov-report=term-missing
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [lint, test]
+    steps:
+      - name: Recuperer le code
+        uses: actions/checkout@v4
+
+      - name: Valider docker-compose.yml
+        working-directory: .
+        run: |
+          cp .env.example .env
+          docker compose config --quiet
+
+      - name: Preparer Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Construire l'image du backend
+        uses: docker/build-push-action@v6
+        with:
+          context: backend
+          push: false
+          tags: plateforme-backend:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
