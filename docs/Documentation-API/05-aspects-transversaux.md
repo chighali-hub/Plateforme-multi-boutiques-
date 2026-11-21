@@ -137,7 +137,11 @@ class BankListCreateView(generics.ListCreateAPIView):
         return [IsShopOwner(), ShopStateAllowed("REJECTED", "ACTIVE")]
 ```
 
-`IsShopOwner` place la boutique dans `request.shop` (chargée une fois avec `select_related("theme")`). Les vues utilisent `request.shop`, jamais un identifiant de boutique venant de la requête.
+`IsShopOwner` place la boutique dans `request.shop` (chargée une fois avec `select_related("theme", "owner")`). Les vues utilisent `request.shop`, jamais un identifiant de boutique venant de la requête.
+
+`ShopStateAllowed(...)` s'utilise aussi directement dans `permission_classes` (l'instance est appelable) : `permission_classes = [IsShopOwner, ShopStateAllowed("ACTIVE")]`. Un état inconnu lève `ValueError` dès l'import du module.
+
+Les contrôles « bloquée » puis « expirée » sont écrits une seule fois, dans `apps.core.permissions.ensure_shop_not_locked(shop)` : la connexion et le rafraîchissement des jetons (phase 2) l'appellent aussi. Les `details` de `SHOP_EXPIRED` et `SHOP_BLOCKED` viennent de `admin_contact_details(shop)` (numéro et lien WhatsApp de l'administrateur lus dans `PlatformSettings`).
 
 ### 4.3 Isolation entre boutiques (multi-tenant)
 C'est la règle de sécurité la plus importante du projet.
@@ -186,6 +190,12 @@ Les limites sont déclarées dans `REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]` et 
   # traduire backend/locale/ar/LC_MESSAGES/django.po
   docker compose exec backend python manage.py compilemessages
   ```
+- Options d'extraction utilisées par la CI (à reprendre telles quelles, sinon le fichier change de forme) :
+  ```bash
+  docker compose exec backend python manage.py makemessages -l ar --no-location --no-obsolete \
+    --ignore "apps/*/tests/*" --ignore "test_media/*" --ignore "test_private_media/*"
+  ```
+- Deux portes bloquantes : la CI refait l'extraction et échoue si le catalogue change (texte oublié) ; `apps/core/tests/test_translations.py` échoue si une entrée arabe est vide ou si le `.mo` n'est pas recompilé.
 - Le fichier `.po` est versionné, le `.mo` aussi (pour que l'image Docker n'ait rien à compiler).
 
 ### 7.3 Contenus saisis par les boutiques
@@ -195,7 +205,7 @@ Les limites sont déclarées dans `REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]` et 
 - L'espace boutique renvoie **les deux** champs (la boutique les modifie).
 
 ### 7.4 Notifications et e-mails
-- Une notification stocke `type` + `data`. Le texte est produit à la lecture (`render(notification, language)`) avec `gettext` dans la langue de la requête.
+- Une notification stocke `type` + `data`. Le texte est produit à la lecture (`render(notification, language) -> (title, message)`) avec `gettext` dans la langue de la requête. Les clés de `data` exigées par type sont dans `apps.notifications.services.REQUIRED_DATA` : `notify()` refuse (`ValueError`) un type inconnu ou des données incomplètes ; les dates (`datetime`) sont enregistrées en ISO 8601.
 - Un e-mail est envoyé dans la langue de la requête qui l'a déclenché si c'est l'utilisateur concerné ; sinon (ex. e-mail envoyé à une boutique suite à une action de l'admin) en **français et arabe** dans le même message.
 
 ---
@@ -221,7 +231,17 @@ Les limites sont déclarées dans `REST_FRAMEWORK["DEFAULT_THROTTLE_RATES"]` et 
 2. Ouverture avec Pillow + `verify()` : le contenu doit être un vrai JPEG, PNG ou WebP (l'extension seule ne suffit pas).
 3. Dimensions ≤ 8 000 × 8 000 pixels (protection contre les « bombes de décompression » ; `Image.MAX_IMAGE_PIXELS` est fixé à 64 millions).
 
-### 8.4 Traitement (`apps/core/images.py::process_image`)
+### 8.4 Traitement (`apps/core/images.py`)
+
+| Fonction | Usage | Sortie |
+|---|---|---|
+| `process_image(file, *, max_dimension, thumbnail_dimension=None)` | Cas général | `ProcessedImage(image, thumbnail)` en WebP, noms aléatoires |
+| `process_logo(file)` | Logo de boutique | `ContentFile` WebP, 512 px max |
+| `process_product_image(file)` | Image produit | `ProcessedImage` : 1 600 px + miniature 400 px |
+| `sanitize_private_image(file)` | Carte d'identité, capture de paiement | Format d'origine, sans métadonnées, sans réduction |
+
+Chaque fonction appelle d'abord `validate_image_file` (§8.3). Les chemins sont fixés par `apps.core.storage.UploadTo("<préfixe>")`.
+
 - Correction de l'orientation (`ImageOps.exif_transpose`) puis **suppression de toutes les métadonnées** (EXIF, GPS).
 - Conversion en RGB, enregistrement en **WebP** qualité 82.
 - Logo : 512 × 512 max. Image produit : 1 600 px max sur le plus grand côté + miniature 400 px.

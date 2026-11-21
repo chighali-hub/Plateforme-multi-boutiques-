@@ -44,12 +44,12 @@ Légende : `──<` relation 1 vers N, `──►` clé étrangère.
 
 ### 2.1 `accounts_user` — utilisateurs (admins et boutiques)
 
-> Déjà créée dans le socle (`apps/accounts/migrations/0001_initial.py`).
+> Créée dans le socle (`apps/accounts/migrations/0001_initial.py`) ; contraintes `accounts_user_email_lowercase` et `accounts_user_role_valid` (`role IN ('ADMIN','SHOP')`) ajoutées par `0002_otp_code_and_user_constraints`.
 
 | Colonne | Type | Contraintes | Description |
 |---|---|---|---|
 | `id` | bigint | PK | |
-| `email` | varchar(254) | **UNIQUE**, NOT NULL | Identifiant de connexion, toujours en minuscules |
+| `email` | varchar(254) | **UNIQUE**, NOT NULL, `CHECK (email = lower(email))` | Identifiant de connexion, toujours en minuscules (garanti par la base, d'où une unicité insensible à la casse) |
 | `password` | varchar(128) | NOT NULL | Hachage Argon2id |
 | `role` | varchar(10) | NOT NULL, défaut `SHOP` | `ADMIN` ou `SHOP` |
 | `is_email_verified` | boolean | défaut `false` | Passe à `true` après l'OTP d'inscription |
@@ -77,6 +77,7 @@ Les tables de liaison `accounts_user_groups` et `accounts_user_user_permissions`
 | `created_at` | timestamptz | NOT NULL | |
 
 Index : `(user_id, purpose, created_at DESC)`.
+Contrainte : `CHECK (purpose IN ('REGISTRATION','PASSWORD_RESET','EMAIL_CHANGE'))`.
 Règle : un code est **valide** si `consumed_at IS NULL`, `expires_at > maintenant` et `attempts < 5`. L'émission d'un nouveau code remplit `consumed_at` de tous les codes encore valides du même `user_id` et `purpose`.
 
 ---
@@ -95,7 +96,7 @@ Règle : un code est **valide** si `consumed_at IS NULL`, `expires_at > maintena
 | `updated_by_id` | bigint | FK → `accounts_user.id`, ON DELETE SET NULL, NULL | | Dernier admin ayant modifié |
 | `updated_at` | timestamptz | NOT NULL | | |
 
-La ligne est créée par une migration de données. Elle est lue via `PlatformSettings.load()` (mise en cache, invalidée à chaque modification).
+La ligne est créée par la migration de données `core/0003_platform_settings_row`. Elle est lue via `PlatformSettings.load()` (mise en cache 5 minutes, invalidée à chaque `save()`). Contraintes : `CHECK (id = 1)`, plus les bornes ci-dessus. La ligne ne se supprime pas.
 
 ### 3.2 `core_audit_log` — journal d'audit des actions sensibles
 
@@ -111,6 +112,7 @@ La ligne est créée par une migration de données. Elle est lue via `PlatformSe
 | `created_at` | timestamptz | NOT NULL | |
 
 Index : `(target_type, target_id)`, `(action)`, `(created_at DESC)`.
+Contrainte : `CHECK (action IN (...))` sur la liste ci-dessous (ajouter une action demande une migration). Le modèle refuse toute modification et toute suppression (`PermissionError`) : le journal est en ajout seul.
 
 Actions enregistrées : `SHOP_SUBMITTED`, `SHOP_RESUBMITTED`, `SHOP_APPROVED`, `SHOP_REJECTED`, `SHOP_BLOCKED`, `SHOP_UNBLOCKED`, `SHOP_RECHARGED`, `PRODUCT_REMOVED_BY_ADMIN`, `SETTINGS_UPDATED`, `ADMIN_LOGIN`, `PASSWORD_RESET`, `EMAIL_CHANGED`.
 
@@ -133,7 +135,9 @@ Actions enregistrées : `SHOP_SUBMITTED`, `SHOP_RESUBMITTED`, `SHOP_APPROVED`, `
 | `is_active` | boolean | défaut `true` | Les modèles inactifs ne sont plus proposés |
 | `sort_order` | smallint | défaut 0 | Ordre d'affichage |
 
-Données initiales (migration de données, phase 1) : 6 modèles `classique`, `elegant`, `moderne`, `minimal`, `magazine`, `tradition`.
+Données initiales (migration de données `shops/0002_theme_templates`, phase 1) : 6 modèles `classique`, `elegant`, `moderne`, `minimal`, `magazine`, `tradition`. Les images d'aperçu sources sont versionnées dans `backend/apps/shops/theme_previews/` et copiées par la migration dans le stockage public (`media/themes/<code>.webp`). Ce sont des maquettes schématiques : les remplacer par les visuels définitifs ne demande aucune migration (même nom de fichier).
+
+Contraintes : `CHECK (layout IN ('GRID','LIST','MAGAZINE','MINIMAL'))` ; les deux couleurs par défaut respectent `^#[0-9A-F]{6}$`.
 
 ### 4.2 `shops_shop` — boutiques
 
@@ -177,13 +181,18 @@ Données initiales (migration de données, phase 1) : 6 modèles `classique`, `e
 Contraintes :
 - `CHECK (status IN ('PENDING','APPROVED','REJECTED'))`
 - `CHECK (status <> 'APPROVED' OR expires_at IS NOT NULL)`
+- `CHECK (onboarding_step IN ('VERIFY_EMAIL','CHOOSE_DESIGN','ACCEPT_TERMS','COMPLETED'))`
+- `CHECK (last_expiry_reminder_days IS NULL OR last_expiry_reminder_days IN (7, 3, 1))`
+- `CHECK` : `phone` et `whatsapp` respectent `^[234][0-9]{7}$` ; `primary_color` et `accent_color` sont vides ou au format `^#[0-9A-F]{6}$`
 
 Index :
 - `(status, is_blocked, expires_at)` — filtrage des boutiques visibles et du tableau de bord admin ;
 - `(submitted_at)` ;
 - **GIN** `search_text_fr gin_trgm_ops` et **GIN** `search_text_ar gin_trgm_ops` — recherche.
 
-Champ calculé (non stocké) `state` : voir [01-vue-d-ensemble.md §4.2](01-vue-d-ensemble.md). Il est implémenté **à la fois** comme propriété Python `Shop.state` et comme annotation de queryset `Shop.objects.with_state()` (expression `Case/When`) pour pouvoir filtrer et compter en base.
+Champ calculé (non stocké) `state` : voir [01-vue-d-ensemble.md §4.2](01-vue-d-ensemble.md). Il est implémenté **à la fois** comme propriété Python `Shop.state` (ou `Shop.get_state(now)`) et comme annotation de queryset `Shop.objects.with_state(now=None)` (expression `Case/When`) pour pouvoir filtrer et compter en base. L'annotation s'appelle **`computed_state`** (un nom d'annotation ne peut pas masquer la propriété `state`) : `Shop.objects.with_state().filter(computed_state="ACTIVE")`. Une boutique `APPROVED` sans `expires_at` (interdit par contrainte) retombe sur `EXPIRED`.
+
+Autres méthodes du manager : `Shop.objects.active(now=None)` et `Shop.objects.publicly_visible(now=None)` (RG-40). Propriétés : `is_publicly_visible()`, `days_left(now=None)`.
 
 ### 4.3 `shops_bank_account` — moyens de paiement de la boutique
 
@@ -247,6 +256,9 @@ Maximum **100** catégories par boutique.
 Contraintes :
 - `CHECK (name_fr <> '' OR name_ar <> '')`
 - `CHECK (status IN ('DRAFT','PUBLISHED'))`
+- `CHECK (source IN ('MANUAL','IMPORT'))`
+
+Les colonnes `search_text_*` sont calculées par `apps.catalog.models.product_search_texts(name_fr, name_ar, description_fr, description_ar)`, appelée par `Product.save()` et à appeler explicitement avant un `bulk_create`.
 
 Index :
 - `(shop_id, status, is_available, price)` — filtres du site public ;
@@ -274,7 +286,7 @@ Limite : **5 000** produits par boutique (brouillons compris).
 | `finished_at` | timestamptz | NULL | |
 
 Index : `(shop_id, created_at DESC)`.
-Règle : une boutique ne peut avoir qu'**un seul** import `PENDING` ou `PROCESSING` à la fois.
+Règle : une boutique ne peut avoir qu'**un seul** import `PENDING` ou `PROCESSING` à la fois. Elle est tenue par la base : `UNIQUE (shop_id) WHERE status IN ('PENDING','PROCESSING')` ; `CHECK (status IN (...))`. Le service de la phase 6 traduit l'`IntegrityError` en `409 IMPORT_ALREADY_RUNNING`.
 
 ### 5.4 `catalog_import_error_row` — lignes d'import en erreur (liste 2)
 
@@ -333,6 +345,7 @@ Contraintes :
 - `CHECK (status IN ('SUBMITTED','CONFIRMED','DELIVERED','REJECTED'))`
 - `CHECK (status <> 'DELIVERED' OR delivered_at IS NOT NULL)`
 - `CHECK (status <> 'REJECTED' OR rejection_reason <> '')`
+- `CHECK (deposit_percent BETWEEN 1 AND 100)` ; `CHECK` : `customer_phone` respecte `^[234][0-9]{7}$`
 
 Index :
 - `(shop_id, status, created_at DESC)` — liste des commandes du dashboard ;
@@ -354,6 +367,8 @@ Champ calculé `remaining_amount = max(total_amount − amount_paid, 0)`.
 | `unit_price` | integer | NOT NULL, CHECK `> 0` | Prix unitaire au moment de l'achat |
 | `quantity` | smallint | NOT NULL, CHECK `quantity BETWEEN 1 AND 99` | |
 | `line_total` | integer | NOT NULL | `unit_price × quantity` |
+
+Contrainte supplémentaire : `CHECK (line_total = unit_price * quantity)`.
 
 Une commande contient au maximum **50** lignes distinctes.
 
@@ -412,6 +427,7 @@ Les clients n'ont pas de compte : ils ne reçoivent pas de notification stockée
 | `created_at` | timestamptz | NOT NULL | |
 
 Index : `(shop_id, created_at DESC)`, `(created_at)`.
+Contrainte supplémentaire : `CHECK (duration_months IS NULL OR duration_months BETWEEN 1 AND 120)`.
 
 ---
 
