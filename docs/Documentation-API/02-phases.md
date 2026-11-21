@@ -1,6 +1,6 @@
 # 02 — Phases de réalisation du backend
 
-> Le backend est réalisé en **8 phases**. Chaque phase est développée dans **sa propre branche**, créée depuis `dev`, et fusionnée dans `dev` par une demande de fusion (pull request) relue. Les règles Git sont dans [08-regles-du-travail.md](08-regles-du-travail.md).
+> Le backend est réalisé en **8 phases**. Chaque phase est développée dans **sa propre branche**, créée depuis `dev`, et fusionnée dans `dev` par une demande de fusion (pull request) dont la CI est verte. Les règles Git sont dans [08-regles-du-travail.md](08-regles-du-travail.md).
 >
 > L'équipe compte **4 développeurs** : chacun prend **2 phases**.
 
@@ -77,7 +77,7 @@ Une phase n'est fusionnée que si **toutes** ces conditions sont remplies :
 - [ ] `python manage.py makemigrations --check --dry-run` ne détecte aucune migration manquante.
 - [ ] Les messages visibles par l'utilisateur sont traduisibles (`gettext`) et traduits en arabe dans `locale/ar`.
 - [ ] La documentation est mise à jour si quelque chose a changé.
-- [ ] La demande de fusion est relue et approuvée par au moins un autre développeur.
+- [ ] Les jobs CI `lint`, `test` et `build` du dernier push de la branche sont verts.
 
 ---
 
