@@ -132,6 +132,13 @@ PRIVATE_MEDIA_ROOT = BASE_DIR / "private_media"
 DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 
+# Images envoyees (logos, produits, cartes d'identite, captures) : voir
+# docs/Documentation-API/07-securite.md section 4.
+UPLOAD_IMAGE_MAX_BYTES = 5 * 1024 * 1024
+UPLOAD_IMAGE_MAX_DIMENSION = 8000
+# Protection contre les bombes de decompression (Image.MAX_IMAGE_PIXELS).
+IMAGE_MAX_PIXELS = 64_000_000
+
 # --- Django REST Framework ----------------------------------------------------
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
@@ -142,8 +149,8 @@ REST_FRAMEWORK = {
         "django_filters.rest_framework.DjangoFilterBackend",
         "rest_framework.filters.OrderingFilter",
     ),
-    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
-    "PAGE_SIZE": 20,
+    "DEFAULT_PAGINATION_CLASS": "apps.core.pagination.StandardPagination",
+    "EXCEPTION_HANDLER": "apps.core.exceptions.api_exception_handler",
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
     "DEFAULT_THROTTLE_CLASSES": (
         "rest_framework.throttling.AnonRateThrottle",
@@ -204,6 +211,8 @@ EMAIL_PORT = env.int("EMAIL_PORT", default=1025)
 EMAIL_HOST_USER = env("EMAIL_HOST_USER", default="")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default="")
 EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", default=False)
+# Aucun appel reseau sans delai d'expiration : un SMTP muet ne bloque pas un worker.
+EMAIL_TIMEOUT = env.int("EMAIL_TIMEOUT", default=10)
 DEFAULT_FROM_EMAIL = env("DEFAULT_FROM_EMAIL", default="no-reply@plateforme.local")
 
 # --- URL du front (liens dans les e-mails) ---------------------------------------
