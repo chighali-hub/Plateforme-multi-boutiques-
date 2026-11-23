@@ -638,20 +638,22 @@ Change le design depuis l'onglet Paramètres (même galerie que l'onboarding).
 {"theme_id": 4, "primary_color": "#064E3B", "accent_color": "#D4A52A"}
 ```
 
-**200** : objet `ShopProfile`.
+Mêmes champs et mêmes règles que `POST /shop/onboarding/design/` : `theme_id` obligatoire (modèle actif), couleurs facultatives (par défaut, celles du modèle). L'étape d'onboarding ne change pas.
+
+**200** : objet `ShopProfile`. **Erreurs** : `400 VALIDATION_ERROR`, `403 SHOP_STATE_FORBIDDEN`.
 
 ### `PUT /shop/me/id-card/` 🔒 SHOP 📎 — état `REJECTED`
-Remplace la carte d'identité (ex. motif « carte illisible »). Au moins un des deux champs `id_card_front`, `id_card_back`.
+Remplace la carte d'identité (ex. motif « carte illisible »). Au moins un des deux champs `id_card_front`, `id_card_back`. Les images sont nettoyées (métadonnées supprimées, qualité conservée) et stockées dans l'espace **privé** ; les anciens fichiers remplacés sont supprimés.
 
-**200** : objet `ShopProfile`.
+**200** : objet `ShopProfile`. **Erreurs** : `400 VALIDATION_ERROR` (aucune face envoyée : `details.non_field_errors` ; image invalide), `403 SHOP_STATE_FORBIDDEN`, `413 FILE_TOO_LARGE`.
 
 ### `GET /shop/me/id-card/{side}/` 🔒 SHOP — états `PENDING`, `REJECTED`, `ACTIVE`
-`side` = `front` ou `back`. Renvoie le **fichier image** (`Content-Type: image/...`, `Cache-Control: private, no-store`).
+`side` = `front` ou `back`. Renvoie le **fichier image** (`Content-Type: image/...`, `Cache-Control: private, no-store`). Une autre valeur de `side`, ou un fichier absent du stockage, renvoie `404 NOT_FOUND`. Une boutique ne lit que **sa** carte (le chemin ne contient aucun identifiant de boutique).
 
 ### `POST /shop/me/resubmit/` 🔒 SHOP — état `REJECTED`
-« Renvoyer la demande de validation » (RG-13). Effets : `status = PENDING`, `submitted_at` = maintenant, notification `SHOP_RESUBMITTED` aux admins, audit `SHOP_RESUBMITTED`. Le `rejection_reason` est conservé jusqu'à la prochaine décision.
+« Renvoyer la demande de validation » (RG-13). Effets : `status = PENDING`, `submitted_at` = maintenant, notification `SHOP_RESUBMITTED` aux admins, audit `SHOP_RESUBMITTED` (le motif du refus précédent est recopié dans `metadata.previous_rejection_reason`). Le `rejection_reason` est conservé jusqu'à la prochaine décision.
 
-Corps vide. **200** : objet `ShopProfile` (`state = "PENDING"`).
+Corps vide. **200** : objet `ShopProfile` (`state = "PENDING"`). **Erreurs** : `403 SHOP_STATE_FORBIDDEN` (demande déjà renvoyée), `409 INVALID_STATE_TRANSITION` (l'état a changé pendant la requête, ex. deux renvois simultanés).
 
 ---
 
@@ -669,7 +671,7 @@ Objet `BankAccount` :
 | PATCH | `/shop/banks/{id}/` | `REJECTED`, `ACTIVE` | champs à modifier | **200** `BankAccount` |
 | DELETE | `/shop/banks/{id}/` | `REJECTED`, `ACTIVE` | — | **204** |
 
-Règles : `bank_name` 2 à 60 caractères, `payment_code` 2 à 40 caractères, couple unique par boutique, 10 banques maximum (`409 LIMIT_REACHED`). Supprimer la dernière banque rend la boutique invisible sur le site public (RG-40) ; `ShopProfile.is_publicly_visible` passe alors à `false`.
+Règles : `bank_name` 2 à 60 caractères, `payment_code` 2 à 40 caractères (espaces de début et de fin retirés), couple unique par boutique, 10 banques maximum (`409 LIMIT_REACHED`). Un doublon (même banque, sans tenir compte de la casse, et même code dans la boutique) est refusé par `400 VALIDATION_ERROR` avec `details.non_field_errors`. Une banque d'une autre boutique renvoie `404 NOT_FOUND`. Supprimer la dernière banque rend la boutique invisible sur le site public (RG-40) ; `ShopProfile.is_publicly_visible` passe alors à `false`.
 
 ---
 
@@ -686,6 +688,8 @@ Onglet « Charger mon compte ».
   "admin_contact_email": "contact@plateforme.mr"
 }
 ```
+
+Le message pré-rempli est traduit selon `Accept-Language`. Tant que l'administrateur n'a pas renseigné son numéro (ou son e-mail) dans les paramètres, `admin_whatsapp` et `whatsapp_url` (ou `admin_contact_email`) valent `""`.
 
 ### `GET /shop/recharges/` 🔒 SHOP — état `ACTIVE` — *paginé*
 Historique des recharges de la boutique, du plus récent au plus ancien.
@@ -1128,7 +1132,7 @@ Onglet « Tableau de bord ».
 | POST | `/notifications/{id}/read/` | Marque comme lue | **200** `Notification` |
 | POST | `/notifications/read-all/` | Marque tout comme lu | **200** `{"updated_count": 3}` |
 
-Un utilisateur ne voit que **ses** notifications (`404 NOT_FOUND` sinon).
+Un utilisateur ne voit que **ses** notifications (`404 NOT_FOUND` sinon). Une valeur de `is_read` autre que `true` ou `false` renvoie `400 VALIDATION_ERROR`. Marquer comme lue une notification déjà lue conserve son `read_at` d'origine ; `read-all` ne compte que les notifications qui étaient non lues.
 
 ---
 
