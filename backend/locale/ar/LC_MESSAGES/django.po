@@ -289,6 +289,9 @@ msgstr "إشعار"
 msgid "notifications"
 msgstr "الإشعارات"
 
+msgid "Valeur attendue : true ou false."
+msgstr "القيمة المتوقعة: true أو false."
+
 #, python-format
 msgid "La boutique %(shop_name)s attend votre validation."
 msgstr "المتجر %(shop_name)s بانتظار قبولك."
@@ -432,6 +435,18 @@ msgstr "حساب بنكي"
 
 msgid "comptes bancaires"
 msgstr "الحسابات البنكية"
+
+msgid "Ce modèle de design n'existe pas ou n'est plus proposé."
+msgstr "نموذج التصميم هذا غير موجود أو لم يعد متاحًا."
+
+msgid "Envoyez au moins une face de la carte d'identité."
+msgstr "أرسل وجهًا واحدًا على الأقل من بطاقة التعريف."
+
+msgid "Vous devez accepter les conditions pour continuer."
+msgstr "يجب عليك قبول الشروط للمتابعة."
+
+msgid "Cette banque avec ce code de paiement est déjà enregistrée."
+msgstr "هذا البنك مع رمز الدفع هذا مسجل مسبقًا."
 
 msgid "Francais"
 msgstr "الفرنسية"

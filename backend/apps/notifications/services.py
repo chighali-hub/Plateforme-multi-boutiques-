@@ -10,7 +10,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from django.conf import settings
-from django.utils import translation
+from django.utils import timezone, translation
 from django.utils.dateparse import parse_datetime
 from django.utils.translation import gettext as _
 from django.utils.translation import ngettext
@@ -163,3 +163,19 @@ def render(notification: Notification, language: str | None = None) -> tuple[str
         with translation.override(language):
             return _texts(notification.type, params)
     return _texts(notification.type, params)
+
+
+def mark_as_read(notification: Notification) -> Notification:
+    """Marque une notification comme lue ; read_at garde la date de premiere lecture."""
+    if not notification.is_read:
+        notification.is_read = True
+        notification.read_at = timezone.now()
+        notification.save(update_fields=["is_read", "read_at"])
+    return notification
+
+
+def mark_all_as_read(user: User) -> int:
+    """Marque toutes les notifications non lues de l'utilisateur ; renvoie leur nombre."""
+    return Notification.objects.filter(recipient=user, is_read=False).update(
+        is_read=True, read_at=timezone.now()
+    )

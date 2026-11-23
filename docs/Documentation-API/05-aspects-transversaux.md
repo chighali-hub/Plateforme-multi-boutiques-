@@ -401,6 +401,7 @@ Le nom de la boutique est commun aux deux langues, donc une boutique nommée « 
 - Chaque vue a un `@extend_schema(tags=[...], summary="...", request=..., responses={...})`.
 - Les réponses d'erreur possibles sont déclarées (`OpenApiResponse(description="SHOP_EXPIRED")`).
 - Les endpoints multipart déclarent `request={"multipart/form-data": Serializer}`.
+- `apps.core.openapi.error_responses("403 SHOP_BLOCKED", "409 LIMIT_REACHED", ...)` produit le dictionnaire des réponses d'erreur (les codes d'un même statut HTTP sont regroupés) : `responses={200: MonSerializer, **error_responses(...)}`.
 - Vérifier avant chaque demande de fusion : `docker compose exec backend python manage.py spectacular --validate --fail-on-warn --file /tmp/schema.yaml`.
 
 ---
