@@ -1,0 +1,5 @@
+{% load i18n %}{% autoescape off %}{% translate "Bonjour," %}
+
+{% blocktranslate %}Le compte de votre boutique {{ shop_name }} a été rechargé.{% endblocktranslate %}
+
+{% blocktranslate %}Ancienne date d'expiration : {{ previous_expires_at }}. Nouvelle date d'expiration : {{ new_expires_at }}.{% endblocktranslate %}{% endautoescape %}

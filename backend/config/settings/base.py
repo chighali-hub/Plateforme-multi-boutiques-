@@ -4,6 +4,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import environ
+from celery.schedules import crontab
 from django.utils.translation import gettext_lazy as _
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -191,6 +192,11 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
     "COMPONENT_SPLIT_REQUEST": True,
     "SCHEMA_PATH_PREFIX": r"/api/v1",
+    # Plusieurs modeles ont un champ `status` : chaque jeu de valeurs garde un nom stable.
+    "ENUM_NAME_OVERRIDES": {
+        "ShopStatusEnum": "apps.shops.models.Shop.Status",
+        "ProductStatusEnum": "apps.catalog.models.Product.Status",
+    },
 }
 
 # --- CORS (front React/Vite) ----------------------------------------------------
@@ -211,6 +217,13 @@ CELERY_RESULT_BACKEND = env("CELERY_RESULT_BACKEND", default=REDIS_URL)
 CELERY_TIMEZONE = TIME_ZONE
 CELERY_TASK_ACKS_LATE = True
 CELERY_TASK_TIME_LIMIT = 30 * 60
+# Taches planifiees (service `beat`), a l'heure de CELERY_TIMEZONE (Africa/Nouakchott).
+CELERY_BEAT_SCHEDULE = {
+    "administration.send_expiry_reminders": {
+        "task": "administration.send_expiry_reminders",
+        "schedule": crontab(hour=8, minute=0),
+    },
+}
 
 # --- E-mail -------------------------------------------------------------------
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django.core.mail.backends.smtp.EmailBackend")

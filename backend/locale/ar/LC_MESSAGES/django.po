@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: plateforme-multi-boutiques\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-21 14:39+0000\n"
+"POT-Creation-Date: 2026-11-24 10:22+0000\n"
 "PO-Revision-Date: 2026-11-21 14:02+0000\n"
 "Last-Translator: \n"
 "Language-Team: ar\n"
@@ -61,6 +61,26 @@ msgstr "تجديد"
 
 msgid "recharges"
 msgstr "التجديدات"
+
+msgid ""
+"Indiquez soit une durée en mois, soit une date cible, mais pas les deux."
+msgstr "حدد إما مدة بالأشهر أو تاريخًا مستهدفًا، وليس كليهما."
+
+msgid "La date de début doit précéder la date de fin."
+msgstr "يجب أن يسبق تاريخ البداية تاريخ النهاية."
+
+msgid "Le prix minimum doit être inférieur ou égal au prix maximum."
+msgstr "يجب أن يكون السعر الأدنى أقل من السعر الأقصى أو مساويًا له."
+
+#, python-format
+msgid "État inconnu : %(value)s."
+msgstr "حالة غير معروفة: %(value)s."
+
+msgid ""
+"La date cible doit être postérieure à la date d'expiration actuelle et à "
+"aujourd'hui."
+msgstr ""
+"يجب أن يكون التاريخ المستهدف بعد تاريخ انتهاء الصلاحية الحالي وبعد اليوم."
 
 msgid "catégorie"
 msgstr "فئة"
@@ -470,6 +490,19 @@ msgid "Votre adresse e-mail a été modifiée"
 msgstr "تم تغيير بريدك الإلكتروني"
 
 #, python-format
+msgid ""
+"Le compte de votre boutique %(shop_name)s expire le %(expires_at)s (jours "
+"restants : %(days_left)s)."
+msgstr ""
+"تنتهي صلاحية حساب متجرك %(shop_name)s في %(expires_at)s (الأيام المتبقية: "
+"%(days_left)s)."
+
+msgid ""
+"Pour éviter l'interruption de votre boutique, rechargez votre compte depuis "
+"l'onglet « Charger mon compte »."
+msgstr "لتجنب توقف متجرك، جدّد حسابك من تبويب « تجديد حسابي »."
+
+#, python-format
 msgid "Votre code pour confirmer cette nouvelle adresse est : %(code)s"
 msgstr "رمز تأكيد عنوانك الجديد هو: %(code)s"
 
@@ -504,3 +537,70 @@ msgstr "إذا لم تقم بإنشاء متجر، فتجاهل هذه الرس�
 
 msgid "Votre code de vérification"
 msgstr "رمز التحقق الخاص بك"
+
+#, python-format
+msgid "Votre boutique %(shop_name)s a été validée par l'administrateur."
+msgstr "قبل المسؤول متجرك %(shop_name)s."
+
+#, python-format
+msgid ""
+"Elle est active gratuitement jusqu'au %(expires_at)s. Pour continuer "
+"ensuite, rechargez votre compte depuis l'onglet « Charger mon compte »."
+msgstr ""
+"متجرك نشط مجانًا حتى %(expires_at)s. للاستمرار بعد ذلك، جدّد حسابك من تبويب "
+"« تجديد حسابي »."
+
+msgid "Votre boutique est validée"
+msgstr "تم قبول متجرك"
+
+#, python-format
+msgid "Votre boutique %(shop_name)s a été bloquée par l'administrateur."
+msgstr "حظر المسؤول متجرك %(shop_name)s."
+
+#, python-format
+msgid "Motif : %(reason)s"
+msgstr "السبب: %(reason)s"
+
+msgid ""
+"Vos données sont conservées. Pour plus d'informations, contactez "
+"l'administration."
+msgstr "بياناتك محفوظة. لمزيد من المعلومات، تواصل مع الإدارة."
+
+msgid "Votre boutique a été bloquée"
+msgstr "تم حظر متجرك"
+
+#, python-format
+msgid "Le compte de votre boutique %(shop_name)s a été rechargé."
+msgstr "تم تجديد حساب متجرك %(shop_name)s."
+
+#, python-format
+msgid ""
+"Ancienne date d'expiration : %(previous_expires_at)s. Nouvelle date "
+"d'expiration : %(new_expires_at)s."
+msgstr ""
+"تاريخ الانتهاء السابق: %(previous_expires_at)s. تاريخ الانتهاء الجديد: "
+"%(new_expires_at)s."
+
+msgid "Votre compte a été rechargé"
+msgstr "تم تجديد حسابك"
+
+#, python-format
+msgid "La demande de validation de votre boutique %(shop_name)s a été refusée."
+msgstr "تم رفض طلب قبول متجرك %(shop_name)s."
+
+msgid ""
+"Corrigez votre profil depuis votre espace, puis cliquez sur « Renvoyer la "
+"demande de validation »."
+msgstr "صحّح ملفك من مساحتك، ثم اضغط على « إعادة إرسال طلب القبول »."
+
+msgid "Votre demande de validation a été refusée"
+msgstr "تم رفض طلب القبول"
+
+#, python-format
+msgid ""
+"Votre boutique %(shop_name)s a été débloquée. Vous pouvez de nouveau vous "
+"connecter."
+msgstr "تم رفع الحظر عن متجرك %(shop_name)s. يمكنك تسجيل الدخول من جديد."
+
+msgid "Votre boutique a été débloquée"
+msgstr "تم رفع الحظر عن متجرك"
