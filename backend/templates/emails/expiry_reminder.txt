@@ -1,0 +1,5 @@
+{% load i18n %}{% autoescape off %}{% translate "Bonjour," %}
+
+{% blocktranslate %}Le compte de votre boutique {{ shop_name }} expire le {{ expires_at }} (jours restants : {{ days_left }}).{% endblocktranslate %}
+
+{% translate "Pour éviter l'interruption de votre boutique, rechargez votre compte depuis l'onglet « Charger mon compte »." %}{% endautoescape %}

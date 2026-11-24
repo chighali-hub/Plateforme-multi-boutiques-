@@ -1,0 +1,5 @@
+{% load i18n %}{% autoescape off %}{% translate "Bonjour," %}
+
+{% blocktranslate %}Votre boutique {{ shop_name }} a été validée par l'administrateur.{% endblocktranslate %}
+
+{% blocktranslate %}Elle est active gratuitement jusqu'au {{ expires_at }}. Pour continuer ensuite, rechargez votre compte depuis l'onglet « Charger mon compte ».{% endblocktranslate %}{% endautoescape %}

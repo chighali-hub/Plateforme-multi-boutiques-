@@ -393,6 +393,7 @@ Le nom de la boutique est commun aux deux langues, donc une boutique nommée « 
 - Une tâche reçoit des **identifiants**, jamais des objets (`process_import_job.delay(job.id)`).
 - Une tâche doit être **idempotente** : la relancer ne crée pas de doublon.
 - En test, `CELERY_TASK_ALWAYS_EAGER = True` (déjà configuré) : les tâches s'exécutent immédiatement.
+- Rappels d'expiration (RG-25, `apps.administration.services.send_expiry_reminders`) : pour chaque boutique `ACTIVE` qui expire dans les 7 jours, le palier atteint est le plus petit de 7, 3 et 1 qui est ≥ `days_left`. Le rappel (notification `EXPIRY_REMINDER` + e-mail) n'est envoyé que si ce palier est plus petit que `last_expiry_reminder_days` (ou si ce champ est vide), puis le champ prend la valeur du palier, sous verrou de ligne. Une exécution manquée est donc rattrapée par le palier suivant, sans doublon ; une recharge remet le champ à `NULL`.
 
 ---
 
@@ -402,6 +403,7 @@ Le nom de la boutique est commun aux deux langues, donc une boutique nommée « 
 - Les réponses d'erreur possibles sont déclarées (`OpenApiResponse(description="SHOP_EXPIRED")`).
 - Les endpoints multipart déclarent `request={"multipart/form-data": Serializer}`.
 - `apps.core.openapi.error_responses("403 SHOP_BLOCKED", "409 LIMIT_REACHED", ...)` produit le dictionnaire des réponses d'erreur (les codes d'un même statut HTTP sont regroupés) : `responses={200: MonSerializer, **error_responses(...)}`.
+- Deux modèles qui ont un champ de choix de même nom (ex. `status` de `Shop` et de `Product`) produisent un avertissement de collision : on donne un nom stable à chaque jeu de valeurs dans `SPECTACULAR_SETTINGS["ENUM_NAME_OVERRIDES"]` (`ShopStatusEnum`, `ProductStatusEnum`…).
 - Vérifier avant chaque demande de fusion : `docker compose exec backend python manage.py spectacular --validate --fail-on-warn --file /tmp/schema.yaml`.
 
 ---

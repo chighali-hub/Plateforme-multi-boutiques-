@@ -1,0 +1,1 @@
+{% load i18n %}{% translate "Votre demande de validation a été refusée" %}

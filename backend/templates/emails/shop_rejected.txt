@@ -1,0 +1,7 @@
+{% load i18n %}{% autoescape off %}{% translate "Bonjour," %}
+
+{% blocktranslate %}La demande de validation de votre boutique {{ shop_name }} a été refusée.{% endblocktranslate %}
+
+{% blocktranslate %}Motif : {{ reason }}{% endblocktranslate %}
+
+{% translate "Corrigez votre profil depuis votre espace, puis cliquez sur « Renvoyer la demande de validation »." %}{% endautoescape %}

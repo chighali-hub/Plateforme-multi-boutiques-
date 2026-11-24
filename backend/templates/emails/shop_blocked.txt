@@ -1,0 +1,7 @@
+{% load i18n %}{% autoescape off %}{% translate "Bonjour," %}
+
+{% blocktranslate %}Votre boutique {{ shop_name }} a été bloquée par l'administrateur.{% endblocktranslate %}
+
+{% blocktranslate %}Motif : {{ reason }}{% endblocktranslate %}
+
+{% translate "Vos données sont conservées. Pour plus d'informations, contactez l'administration." %}{% endautoescape %}
