@@ -1157,6 +1157,8 @@ Utilisé par la page « compte expiré » et l'en-tête du site.
 }
 ```
 
+Tant que l'administrateur n'a pas renseigné son numéro (ou son e-mail), `admin_whatsapp` et `admin_whatsapp_url` (ou `admin_contact_email`) valent `""`.
+
 ### `GET /public/shops/` — *paginé*
 Page d'accueil : cartes des boutiques.
 
@@ -1374,8 +1376,10 @@ Tous les endpoints de cette section sont 🔒 ADMIN. Toute action qui modifie un
 }
 ```
 
-- `expiring_soon` : boutiques `ACTIVE` qui expirent dans les 7 jours, de la plus urgente à la moins urgente (20 maximum).
-- `latest_submissions` : 5 dernières boutiques `PENDING`.
+- `shops` : nombre de boutiques par état calculé (`state`), plus le total.
+- `expiring_soon` : boutiques `ACTIVE` qui expirent dans les 7 jours, de la plus urgente à la moins urgente (20 maximum). `whatsapp_url` pointe vers le numéro WhatsApp de la boutique.
+- `recharges` : recharges du mois en cours (fuseau `Africa/Nouakchott`) ; `amount_received` additionne les montants renseignés (`0` si aucun).
+- `latest_submissions` : 5 dernières boutiques `PENDING`, de la plus récente à la plus ancienne.
 
 ### Objet `AdminShopSummary`
 
@@ -1406,7 +1410,9 @@ Tous les endpoints de cette section sont 🔒 ADMIN. Toute action qui modifie un
 | `search` | Nom de la boutique, e-mail, téléphone, nom du propriétaire (insensible à la casse et aux accents) |
 | `ordering` | `-submitted_at` (défaut), `submitted_at`, `expires_at`, `-expires_at`, `name`, `-created_at` |
 
-**200** : page de `AdminShopSummary`.
+**200** : page de `AdminShopSummary`. Les boutiques sans date de soumission ou d'expiration sont toujours placées en fin de liste. **Erreurs** : `400 VALIDATION_ERROR` (état inconnu dans `state`, valeur de `ordering` hors liste).
+
+`days_left` : comme dans `ShopProfile` (arrondi supérieur, `0` si expirée, `null` sans date d'expiration).
 
 ### `GET /admin/shops/{id}/`
 
@@ -1438,10 +1444,10 @@ Tous les endpoints de cette section sont 🔒 ADMIN. Toute action qui modifie un
 }
 ```
 
-`recent_audit` : les 20 dernières entrées d'audit qui concernent cette boutique.
+`recent_audit` : les 20 dernières entrées d'audit qui concernent cette boutique (y compris les retraits de ses produits, `PRODUCT_REMOVED_BY_ADMIN`), de la plus récente à la plus ancienne. `stats.revenue_delivered_total` additionne le `total_amount` des commandes `DELIVERED`. Une boutique inexistante renvoie `404 NOT_FOUND`.
 
 ### `GET /admin/shops/{id}/id-card/{side}/`
-`side` = `front` ou `back`. Renvoie l'image (`Cache-Control: private, no-store`).
+`side` = `front` ou `back`. Renvoie l'image (`Cache-Control: private, no-store`). Une autre valeur de `side`, une boutique inexistante ou un fichier absent du stockage renvoient `404 NOT_FOUND`.
 
 ### Actions sur une boutique
 
@@ -1450,9 +1456,14 @@ Tous les endpoints de cette section sont 🔒 ADMIN. Toute action qui modifie un
 | `POST /admin/shops/{id}/approve/` | — | `state = PENDING` | `status = APPROVED`, `approved_at`, `approved_by`, `expires_at = maintenant + trial_months`, `rejection_reason = ''` ; notification `SHOP_APPROVED` + e-mail ; audit (RG-10, RG-11) | `409 INVALID_STATE_TRANSITION` |
 | `POST /admin/shops/{id}/reject/` | `{"reason": "..."}` (10 à 500 car.) | `state = PENDING` | `status = REJECTED`, `rejected_at`, `rejection_reason` ; notification `SHOP_REJECTED` + e-mail ; audit (RG-12) | `409 INVALID_STATE_TRANSITION` |
 | `POST /admin/shops/{id}/block/` | `{"reason": "..."}` (5 à 500 car.) | `is_blocked = false` | `is_blocked = true`, `blocked_at`, `block_reason` ; sessions de la boutique invalidées ; e-mail ; audit (RG-14) | `409 INVALID_STATE_TRANSITION` |
-| `POST /admin/shops/{id}/unblock/` | — | `is_blocked = true` | `is_blocked = false`, `block_reason = ''` ; notification `SHOP_UNBLOCKED` + e-mail ; audit | `409 INVALID_STATE_TRANSITION` |
+| `POST /admin/shops/{id}/unblock/` | — | `is_blocked = true` | `is_blocked = false`, `block_reason = ''`, `blocked_at = null` ; notification `SHOP_UNBLOCKED` + e-mail ; audit (`metadata.previous_block_reason`) | `409 INVALID_STATE_TRANSITION` |
 
 **200** : objet détaillé de la boutique (comme `GET /admin/shops/{id}/`).
+
+- `409 INVALID_STATE_TRANSITION` : `details = {"current_state": "ACTIVE"}` (état calculé au moment de la demande). Rien n'est modifié.
+- `400 VALIDATION_ERROR` : `reason` absent ou de longueur invalide (`details.reason`).
+- Le blocage est possible depuis tout état (`ONBOARDING` compris). Le déblocage ne modifie ni le statut ni `expires_at` : l'état est recalculé (une boutique dont la date est dépassée pendant le blocage redevient `EXPIRED`). Les jetons révoqués au blocage restent invalides : la boutique se reconnecte.
+- Les e-mails envoyés à la boutique après une action de l'admin sont rédigés en français puis en arabe (même message).
 
 ### `GET /admin/shops/{id}/recharge-preview/`
 Calcule la nouvelle date **sans rien enregistrer** (affichage avant confirmation). Un seul des deux paramètres :
@@ -1472,9 +1483,9 @@ Calcule la nouvelle date **sans rien enregistrer** (affichage avant confirmation
 }
 ```
 
-`base_date = max(current_expires_at, maintenant)` (RG-22). Ajout de mois calendaire : le 31 janvier + 1 mois = le 28 (ou 29) février.
+`base_date = max(current_expires_at, maintenant)` (RG-22). Ajout de mois calendaire : le 31 janvier + 1 mois = le 28 (ou 29) février. `target_date` doit être un jour **strictement postérieur** au jour de `base_date` (heure de Nouakchott).
 
-**Erreurs** : `400 VALIDATION_ERROR` (aucun ou deux paramètres, `target_date` non postérieure à `base_date`), `409 INVALID_STATE_TRANSITION` (statut différent de `APPROVED`).
+**Erreurs** : `400 VALIDATION_ERROR` (aucun ou deux paramètres : `details.non_field_errors` ; `duration_months` hors de 1 à 120 ; date mal formée ; `target_date` non postérieure à `base_date` : `details.target_date`), `404 NOT_FOUND`, `409 INVALID_STATE_TRANSITION` (statut différent de `APPROVED`, `details = {"current_state": "PENDING"}`).
 
 ### `POST /admin/shops/{id}/recharge/`
 « Charger le compte » (RG-20 à RG-24).
@@ -1487,9 +1498,9 @@ ou
 {"target_date": "2031-11-20", "amount_received": 50000}
 ```
 
-Exactement un parmi `duration_months` et `target_date`. `amount_received` (entier ≥ 0) et `note` (255 car.) sont facultatifs.
+Exactement un parmi `duration_months` et `target_date`, avec les mêmes règles et les mêmes erreurs que l'aperçu. `amount_received` (entier ≥ 0, ou `null`) et `note` (255 car.) sont facultatifs. Une boutique bloquée au statut `APPROVED` peut être rechargée : elle reste bloquée.
 
-Effets (transaction, verrou `SELECT … FOR UPDATE` sur la boutique) : `expires_at` mis à jour, `last_expiry_reminder_days = NULL`, ligne `administration_recharge`, notification `SHOP_RECHARGED` + e-mail, audit `SHOP_RECHARGED`.
+Effets (transaction, verrou `SELECT … FOR UPDATE` sur la boutique) : `expires_at` mis à jour, `last_expiry_reminder_days = NULL` (les rappels reprennent), ligne `administration_recharge`, notification `SHOP_RECHARGED` + e-mail, audit `SHOP_RECHARGED` (`metadata` : `recharge_id`, anciennes et nouvelles dates, `duration_months`, `target_date`, `amount_received`).
 
 **201**
 ```json
@@ -1509,13 +1520,13 @@ Effets (transaction, verrou `SELECT … FOR UPDATE` sur la boutique) : `expires_
 ```
 
 ### `GET /admin/shops/{id}/recharges/` — *paginé*
-Historique des recharges de la boutique (objet `recharge` ci-dessus).
+Historique des recharges de la boutique (objet `recharge` ci-dessus), du plus récent au plus ancien.
 
 ### `GET /admin/recharges/` — *paginé*
-Toutes les recharges. Filtres : `shop` (id), `date_from`, `date_to` (`AAAA-MM-JJ`). Chaque élément contient aussi `shop: {id, name}`.
+Toutes les recharges, de la plus récente à la plus ancienne. Filtres : `shop` (id), `date_from`, `date_to` (`AAAA-MM-JJ`, bornes incluses, jours de Nouakchott). Chaque élément contient aussi `shop: {id, name}`. Valeur invalide ou `date_from > date_to` → `400 VALIDATION_ERROR`.
 
 ### `GET /admin/shops/{id}/products/` — *paginé*
-Produits d'une boutique pour la modération. Mêmes filtres que `GET /shop/products/`. Éléments au format `Product`.
+Produits d'une boutique pour la modération (brouillons compris). Mêmes filtres que `GET /shop/products/`, validés de la même façon (`400 VALIDATION_ERROR`). Éléments au format `Product`.
 
 ### `POST /admin/shops/{id}/products/{product_id}/remove/`
 Supprime un produit interdit.
@@ -1524,7 +1535,7 @@ Supprime un produit interdit.
 {"reason": "Produit contrefait."}
 ```
 
-`reason` : 5 à 500 caractères. Effets : suppression du produit, notification `PRODUCT_REMOVED` à la boutique, audit `PRODUCT_REMOVED_BY_ADMIN` (avec le nom et le prix du produit dans `metadata`). **204**.
+`reason` : 5 à 500 caractères. Effets : suppression du produit (les commandes gardent leurs copies, RG-46) et de ses fichiers image, notification `PRODUCT_REMOVED` à la boutique, audit `PRODUCT_REMOVED_BY_ADMIN` (avec `shop_id`, le nom, le prix et le motif dans `metadata`). **204**. Un produit d'une autre boutique renvoie `404 NOT_FOUND`.
 
 ### `GET /admin/settings/` · `PATCH /admin/settings/`
 
@@ -1539,7 +1550,7 @@ Supprime un produit interdit.
 }
 ```
 
-`PATCH` : `admin_whatsapp` (téléphone mauritanien), `admin_contact_email`, `trial_months` (0 à 12), `deposit_percent` (1 à 100). Audit `SETTINGS_UPDATED` avec les anciennes et nouvelles valeurs. Les changements s'appliquent aux **prochaines** validations et commandes uniquement.
+`PATCH` : `admin_whatsapp` (téléphone mauritanien), `admin_contact_email` (enregistré en minuscules), `trial_months` (0 à 12), `deposit_percent` (1 à 100). Tous les champs sont facultatifs. Audit `SETTINGS_UPDATED` avec les anciennes et nouvelles valeurs des seuls champs modifiés (`metadata.changes`) ; une requête qui ne change rien n'écrit rien. Les changements s'appliquent aux **prochaines** validations et commandes uniquement. **Erreurs** : `400 VALIDATION_ERROR`.
 
 ### `GET /admin/audit-logs/` — *paginé*
 
@@ -1548,7 +1559,9 @@ Supprime un produit interdit.
 | `action` | Une action (liste dans [04-schema-base-de-donnees.md §3.2](04-schema-base-de-donnees.md)) |
 | `actor` | Identifiant de l'utilisateur |
 | `target_type`, `target_id` | Cible |
-| `date_from`, `date_to` | `AAAA-MM-JJ` |
+| `date_from`, `date_to` | `AAAA-MM-JJ`, bornes incluses (jours de Nouakchott) |
+
+Du plus récent au plus ancien. Valeur invalide (action inconnue, identifiant non numérique, date mal formée, `date_from > date_to`) → `400 VALIDATION_ERROR`.
 
 **200** (élément)
 ```json
