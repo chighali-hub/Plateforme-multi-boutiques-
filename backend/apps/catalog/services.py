@@ -1,27 +1,38 @@
-"""Ecritures du catalogue de l'espace boutique : categories.
+"""Ecritures du catalogue de l'espace boutique : categories et produits.
 
-Voir 03-reference-api.md section 6, 04-schema-base-de-donnees.md section 5.1
-et 01-vue-d-ensemble.md (RG-32). Les services appliquent les regles ; les vues
-ne font qu'appeler.
+Voir 03-reference-api.md section 6, 04-schema-base-de-donnees.md sections 5.1,
+5.2 et 9.5, et 01-vue-d-ensemble.md (RG-30 a RG-32). Les services appliquent
+les regles ; les vues ne font qu'appeler.
 """
 
 import logging
 from typing import Any
 
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.core.files.base import ContentFile
 from django.db import IntegrityError, transaction
 from django.db.models import Value
+from django.db.models.fields.files import FieldFile
 from django.db.models.functions import Lower
+from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from rest_framework.exceptions import ValidationError
 
 from apps.core.exceptions import LimitReached
+from apps.core.images import process_product_image
+from apps.core.storage import delete_file_on_commit
 from apps.shops.models import Shop
 
-from .models import Category
+from .models import Category, ImportJob, Product
 
 logger = logging.getLogger(__name__)
 
 MAX_CATEGORIES = 100
+MAX_PRODUCTS = 5000
+PRODUCT_NAME_FIELDS = ("name_fr", "name_ar")
+PRODUCT_TEXT_FIELDS = frozenset({*PRODUCT_NAME_FIELDS, "description_fr", "description_ar"})
+PRODUCT_FIELDS = frozenset({*PRODUCT_TEXT_FIELDS, "price", "category", "status", "is_available"})
+PRODUCT_CATEGORY_UNKNOWN = _("Cette catégorie n'existe pas dans votre boutique.")
 CATEGORY_NAME_FIELDS = ("name_fr", "name_ar")
 CATEGORY_FIELDS = frozenset({*CATEGORY_NAME_FIELDS, "sort_order"})
 UNIQUE_CONSTRAINT_FIELDS = {
@@ -29,8 +40,17 @@ UNIQUE_CONSTRAINT_FIELDS = {
     "catalog_category_unique_name_ar": "name_ar",
 }
 
-CATEGORY_NAME_REQUIRED = _("Renseignez au moins un nom, en français ou en arabe.")
+NAME_REQUIRED = _("Renseignez au moins un nom, en français ou en arabe.")
 CATEGORY_NAME_DUPLICATE = _("Une catégorie porte déjà ce nom dans votre boutique.")
+
+
+def _lock_shop(shop: Shop) -> None:
+    """Verrouille la ligne de la boutique (a appeler dans une transaction).
+
+    Deux creations simultanees dans la meme boutique sont ainsi serialisees :
+    le controle d'une limite (categories, produits) ne peut pas etre depasse.
+    """
+    Shop.objects.select_for_update().filter(pk=shop.pk).values_list("pk").get()
 
 
 def _apply_fields(category: Category, data: dict[str, Any]) -> None:
@@ -43,10 +63,10 @@ def _apply_fields(category: Category, data: dict[str, Any]) -> None:
         setattr(category, name, value)
 
 
-def _ensure_has_name(category: Category) -> None:
-    """Au moins un des deux noms, sur l'etat final de la categorie."""
-    if not (category.name_fr or category.name_ar):
-        raise ValidationError({"non_field_errors": [CATEGORY_NAME_REQUIRED]})
+def _ensure_has_name(item: Category | Product) -> None:
+    """Au moins un des deux noms, sur l'etat final de la categorie ou du produit."""
+    if not (item.name_fr or item.name_ar):
+        raise ValidationError({"non_field_errors": [NAME_REQUIRED]})
 
 
 def _ensure_names_are_unique(category: Category) -> None:
@@ -100,7 +120,7 @@ def create_category(shop: Shop, data: dict[str, Any]) -> Category:
     Leve LimitReached (409, `details = {"limit": 100}`) et ValidationError (400).
     """
     with transaction.atomic():
-        Shop.objects.select_for_update().filter(pk=shop.pk).values_list("pk").get()
+        _lock_shop(shop)
         if Category.objects.filter(shop=shop).count() >= MAX_CATEGORIES:
             raise LimitReached(details={"limit": MAX_CATEGORIES})
         category = Category(shop=shop)
@@ -138,3 +158,154 @@ def delete_category(category: Category) -> None:
     with transaction.atomic():
         category.delete()
     logger.info("Categorie %s supprimee", category_id)
+
+
+# --- Produits ---------------------------------------------------------------------
+def _apply_product_fields(product: Product, data: dict[str, Any]) -> None:
+    """Recopie les champs modifiables ; noms et descriptions sans espaces autour.
+
+    Les autres cles (`shop`, `source`, `import_job`, `published_at`...) sont ignorees.
+    """
+    for name, value in data.items():
+        if name not in PRODUCT_FIELDS:
+            continue
+        if name in PRODUCT_TEXT_FIELDS:
+            value = (value or "").strip()
+        setattr(product, name, value)
+
+
+def _ensure_category_in_shop(product: Product) -> None:
+    """La categorie doit appartenir a la boutique du produit.
+
+    Une categorie d'une autre boutique donne la meme erreur qu'une categorie
+    inexistante : son existence n'est pas divulguee.
+    """
+    if product.category is not None and product.category.shop_id != product.shop_id:
+        raise ValidationError({"category_id": [PRODUCT_CATEGORY_UNKNOWN]})
+
+
+def _process_image(image_file) -> tuple[ContentFile, ContentFile]:
+    """Image principale WebP (1 600 px) + miniature (400 px), sans metadonnees.
+
+    Leve FileTooLarge (413) ou ValidationError (400, champ `image`).
+    """
+    try:
+        processed = process_product_image(image_file)
+    except DjangoValidationError as error:
+        raise ValidationError({"image": error.messages}) from None
+    return processed.image, processed.thumbnail
+
+
+def _store_images(product: Product, image: ContentFile, thumbnail: ContentFile) -> list[FieldFile]:
+    """Ecrit les fichiers sur le stockage (sans enregistrer la ligne).
+
+    Renvoie les fichiers ecrits, a supprimer si l'enregistrement echoue ensuite.
+    """
+    product.image.save(image.name, image, save=False)
+    product.thumbnail.save(thumbnail.name, thumbnail, save=False)
+    return [product.image, product.thumbnail]
+
+
+def _discard_files(files: list[FieldFile]) -> None:
+    """Supprime tout de suite des fichiers ecrits pour une operation qui a echoue."""
+    for field_file in files:
+        try:
+            field_file.storage.delete(field_file.name)
+        except OSError:
+            logger.exception("Fichier orphelin non supprime : %s", field_file.name)
+
+
+def create_product_from_data(
+    shop: Shop,
+    data: dict[str, Any],
+    image_file,
+    *,
+    source: str = Product.Source.MANUAL,
+    import_job: ImportJob | None = None,
+) -> Product:
+    """Cree un produit dans la boutique (RG-30, RG-31).
+
+    Reutilisable par l'import (phase 6), qui passe `source="IMPORT"` et le job.
+    `data` contient les champs deja valides : `name_fr`, `name_ar`,
+    `description_fr`, `description_ar`, `price`, `category` (instance de la
+    boutique ou None), `status` (defaut PUBLISHED), `is_available` (defaut true).
+
+    Regles : noms et descriptions debarrasses des espaces, au moins un nom,
+    categorie de la boutique, 5 000 produits au maximum (brouillons compris),
+    controle avant le traitement de l'image, sous verrou de la boutique.
+    `published_at` est rempli si le produit est cree publie. Si l'operation
+    echoue apres l'ecriture des images, les fichiers sont supprimes.
+
+    Leve LimitReached (409, `details = {"limit": 5000}`), ValidationError (400)
+    et FileTooLarge (413).
+    """
+    new_files: list[FieldFile] = []
+    try:
+        with transaction.atomic():
+            _lock_shop(shop)
+            if Product.objects.filter(shop=shop).count() >= MAX_PRODUCTS:
+                raise LimitReached(details={"limit": MAX_PRODUCTS})
+            product = Product(shop=shop, source=source, import_job=import_job)
+            _apply_product_fields(product, data)
+            _ensure_has_name(product)
+            _ensure_category_in_shop(product)
+            if product.status == Product.Status.PUBLISHED:
+                product.published_at = timezone.now()
+            image, thumbnail = _process_image(image_file)
+            new_files = _store_images(product, image, thumbnail)
+            product.save()
+    except BaseException:
+        _discard_files(new_files)
+        raise
+    logger.info("Produit %s cree pour la boutique %s (%s)", product.pk, shop.pk, source)
+    return product
+
+
+def update_product(product: Product, data: dict[str, Any], image_file=None) -> Product:
+    """Modifie un produit (RG-30, RG-31) ; tous les champs sont facultatifs.
+
+    Les regles de la creation s'appliquent a l'etat final. Passer de DRAFT a
+    PUBLISHED remplit `published_at` ; un produit qui reste publie garde sa date,
+    et un retour en brouillon la conserve. Une nouvelle image remplace l'ancienne :
+    les anciens fichiers sont supprimes apres la validation de la transaction,
+    les nouveaux sont supprimes si l'operation echoue.
+
+    Leve ValidationError (400) et FileTooLarge (413).
+    """
+    new_files: list[FieldFile] = []
+    try:
+        with transaction.atomic():
+            product = (
+                Product.objects.select_for_update(of=("self",))
+                .select_related("category")
+                .get(pk=product.pk)
+            )
+            was_published = product.status == Product.Status.PUBLISHED
+            _apply_product_fields(product, data)
+            _ensure_has_name(product)
+            _ensure_category_in_shop(product)
+            if product.status == Product.Status.PUBLISHED and not was_published:
+                product.published_at = timezone.now()
+            if image_file is not None:
+                image, thumbnail = _process_image(image_file)
+                delete_file_on_commit(product.image)
+                delete_file_on_commit(product.thumbnail)
+                new_files = _store_images(product, image, thumbnail)
+            product.save()
+    except BaseException:
+        _discard_files(new_files)
+        raise
+    return product
+
+
+def delete_product(product: Product) -> None:
+    """Supprime un produit (suppression physique, 04 section 9.5).
+
+    Les lignes de commande gardent leurs copies (`product_id` passe a NULL). Les
+    fichiers image sont supprimes apres la validation de la transaction par le
+    signal `post_delete` (apps/catalog/signals.py).
+    """
+    product_id = product.pk
+    with transaction.atomic():
+        product.delete()
+    logger.info("Produit %s supprime", product_id)

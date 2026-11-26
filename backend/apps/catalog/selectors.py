@@ -8,7 +8,7 @@ from django.db.models import Count, QuerySet
 
 from apps.shops.models import Shop
 
-from .models import Category
+from .models import Category, Product
 
 
 def get_shop_categories(shop: Shop) -> QuerySet[Category]:
@@ -21,4 +21,15 @@ def get_shop_categories(shop: Shop) -> QuerySet[Category]:
         Category.objects.filter(shop=shop)
         .annotate(products_count=Count("products"))
         .order_by("sort_order", "name_fr", "id")
+    )
+
+
+def get_shop_products(shop: Shop) -> QuerySet[Product]:
+    """Produits de la boutique (brouillons compris), du plus recent au plus ancien.
+
+    La categorie est chargee dans la meme requete (`select_related`) : le nombre
+    de requetes d'une page ne depend pas du nombre de produits.
+    """
+    return (
+        Product.objects.filter(shop=shop).select_related("category").order_by("-created_at", "-id")
     )
