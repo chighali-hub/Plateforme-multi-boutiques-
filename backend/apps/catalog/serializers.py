@@ -9,6 +9,7 @@ from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
 
 from apps.accounts.serializers import ImageUploadField
+from apps.shops.models import Shop
 
 from .models import PRODUCT_PRICE_MAX, PRODUCT_PRICE_MIN, Category, Product
 from .services import (
@@ -117,7 +118,7 @@ class OptionalBooleanField(serializers.BooleanField):
     default_empty_html = serializers.empty
 
 
-def _shop_category(shop, value: int | None) -> Category | None:
+def _shop_category(shop: Shop, value: int | None) -> Category | None:
     """Categorie de la boutique ; inexistante ou d'une autre boutique : meme erreur.
 
     Partagee par le POST/PATCH unitaire et par bulk-update.

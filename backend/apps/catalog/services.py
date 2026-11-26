@@ -9,7 +9,7 @@ import logging
 from typing import Any
 
 from django.core.exceptions import ValidationError as DjangoValidationError
-from django.core.files.base import ContentFile
+from django.core.files.base import ContentFile, File
 from django.db import IntegrityError, transaction
 from django.db.models import Value
 from django.db.models.fields.files import FieldFile
@@ -184,7 +184,7 @@ def _ensure_category_in_shop(product: Product) -> None:
         raise ValidationError({"category_id": [PRODUCT_CATEGORY_UNKNOWN]})
 
 
-def _process_image(image_file) -> tuple[ContentFile, ContentFile]:
+def _process_image(image_file: File) -> tuple[ContentFile, ContentFile]:
     """Image principale WebP (1 600 px) + miniature (400 px), sans metadonnees.
 
     Leve FileTooLarge (413) ou ValidationError (400, champ `image`).
@@ -218,7 +218,7 @@ def _discard_files(files: list[FieldFile]) -> None:
 def create_product_from_data(
     shop: Shop,
     data: dict[str, Any],
-    image_file,
+    image_file: File,
     *,
     source: str = Product.Source.MANUAL,
     import_job: ImportJob | None = None,
@@ -261,7 +261,9 @@ def create_product_from_data(
     return product
 
 
-def update_product(product: Product, data: dict[str, Any], image_file=None) -> Product:
+def update_product(
+    product: Product, data: dict[str, Any], image_file: File | None = None
+) -> Product:
     """Modifie un produit (RG-30, RG-31) ; tous les champs sont facultatifs.
 
     Les regles de la creation s'appliquent a l'etat final. Passer de DRAFT a
