@@ -197,7 +197,7 @@ Une phase n'est fusionnée que si **toutes** ces conditions sont remplies :
 5. Suppression des fichiers image après suppression d'un produit (`transaction.on_commit`).
 6. Service réutilisable `create_product_from_data(shop, data, image_file)` : il sera appelé par l'import (phase 6).
 
-**Tests clés** : RG-30 à RG-32 ; filtres combinés ; `min_price > max_price` ; isolation (une boutique ne peut pas utiliser la catégorie d'une autre ni modifier ses produits) ; actions groupées avec identifiants d'une autre boutique → `NOT_FOUND`.
+**Tests clés** : RG-30 à RG-32 ; filtres combinés ; `min_price > max_price` ; isolation (une boutique ne peut pas utiliser la catégorie d'une autre ni modifier ses produits) ; actions groupées avec identifiants d'une autre boutique → `NOT_FOUND` dans `skipped` pour `bulk-publish`, ignorés et non comptés pour `bulk-update` et `bulk-delete`.
 
 ---
 
