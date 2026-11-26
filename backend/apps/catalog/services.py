@@ -309,3 +309,93 @@ def delete_product(product: Product) -> None:
     with transaction.atomic():
         product.delete()
     logger.info("Produit %s supprime", product_id)
+
+
+# --- Actions groupees -------------------------------------------------------------
+BULK_MAX_IDS = 1000
+SKIP_NOT_FOUND = "NOT_FOUND"
+SKIP_ALREADY_PUBLISHED = "ALREADY_PUBLISHED"
+BULK_UPDATE_FIELDS = frozenset({"category", "is_available"})
+BULK_UPDATE_NOTHING = _("Indiquez au moins un champ à modifier : category_id ou is_available.")
+
+
+def bulk_publish_products(shop: Shop, ids: list[int]) -> dict[str, list]:
+    """Publie les brouillons choisis (« Publier la selection », RG-35, liste 1).
+
+    `ids` est deja valide et dedoublonne (1 a 1 000 entiers). Seuls les produits
+    de `shop` sont lus : un identifiant inexistant ou d'une autre boutique est
+    renvoye dans `skipped` avec la raison NOT_FOUND (meme raison dans les deux
+    cas : aucune divulgation). Un produit deja publie est renvoye avec
+    ALREADY_PUBLISHED et garde son `published_at`. Les brouillons passent en
+    PUBLISHED avec le meme `published_at` et le meme `updated_at` ; `is_available`
+    et les textes ne changent pas. Les listes suivent l'ordre de `ids`.
+
+    Nombre de requetes constant : une lecture sous verrou, une mise a jour.
+    Aucune exception metier : la reponse decrit le sort de chaque identifiant.
+    """
+    with transaction.atomic():
+        statuses = dict(
+            Product.objects.select_for_update()
+            .filter(shop=shop, id__in=ids)
+            .values_list("id", "status")
+        )
+        drafts = [pk for pk in ids if statuses.get(pk) == Product.Status.DRAFT]
+        if drafts:
+            now = timezone.now()
+            Product.objects.filter(shop=shop, id__in=drafts).update(
+                status=Product.Status.PUBLISHED, published_at=now, updated_at=now
+            )
+    skipped = [
+        {"id": pk, "reason": SKIP_NOT_FOUND if pk not in statuses else SKIP_ALREADY_PUBLISHED}
+        for pk in ids
+        if statuses.get(pk) != Product.Status.DRAFT
+    ]
+    logger.info("Boutique %s : %s produit(s) publie(s) en groupe", shop.pk, len(drafts))
+    return {"published_ids": drafts, "skipped": skipped}
+
+
+def bulk_update_products(shop: Shop, ids: list[int], data: dict[str, Any]) -> int:
+    """Change la categorie et/ou la disponibilite des produits choisis.
+
+    `data` contient `category` (instance de la boutique ou None : sans categorie)
+    et/ou `is_available` ; une cle absente ne change pas. Le statut,
+    `published_at` et les textes ne sont jamais modifies ici.
+
+    Traitement partiel (decision du responsable de la phase 5) : seuls les
+    produits de `shop` sont mis a jour ; un identifiant inexistant ou d'une autre
+    boutique est ignore, sans distinction (aucune divulgation). Renvoie le nombre
+    de produits de la boutique trouves et mis a jour, meme si la valeur etait
+    deja identique (0 si aucun). Une seule requete UPDATE, `updated_at` compris.
+
+    Leve ValidationError (400, `category_id`) si la categorie n'est pas de la
+    boutique (controle de defense : le serializer l'a deja verifie).
+    """
+    fields = {name: value for name, value in data.items() if name in BULK_UPDATE_FIELDS}
+    category = fields.get("category")
+    if category is not None and category.shop_id != shop.pk:
+        raise ValidationError({"category_id": [PRODUCT_CATEGORY_UNKNOWN]})
+    with transaction.atomic():
+        updated = Product.objects.filter(shop=shop, id__in=ids).update(
+            **fields, updated_at=timezone.now()
+        )
+    logger.info("Boutique %s : %s produit(s) modifie(s) en groupe", shop.pk, updated)
+    return updated
+
+
+def bulk_delete_products(shop: Shop, ids: list[int]) -> int:
+    """Supprime les produits choisis (suppression physique, 04 section 9.5).
+
+    Traitement partiel (decision du responsable de la phase 5) : seuls les
+    produits de `shop` sont supprimes ; un identifiant inexistant ou d'une autre
+    boutique est ignore, sans distinction. Les lignes de commande gardent leurs
+    copies (`product_id` passe a NULL). Le signal `post_delete` supprime image et
+    miniature de chaque produit apres la validation de la transaction : une
+    transaction annulee ne supprime aucun fichier.
+
+    Renvoie le nombre de produits supprimes (objets lies non comptes, 0 si aucun).
+    """
+    with transaction.atomic():
+        _total, per_model = Product.objects.filter(shop=shop, id__in=ids).delete()
+    deleted = per_model.get(Product._meta.label, 0)
+    logger.info("Boutique %s : %s produit(s) supprime(s) en groupe", shop.pk, deleted)
+    return deleted

@@ -22,7 +22,23 @@ CATEGORY_ROUTES = [
     ),
 ]
 
-PRODUCT_LITERAL_ROUTES: list = []
+PRODUCT_LITERAL_ROUTES = [
+    path(
+        "shop/products/bulk-publish/",
+        views.ProductBulkPublishView.as_view(),
+        name="catalog-products-bulk-publish",
+    ),
+    path(
+        "shop/products/bulk-update/",
+        views.ProductBulkUpdateView.as_view(),
+        name="catalog-products-bulk-update",
+    ),
+    path(
+        "shop/products/bulk-delete/",
+        views.ProductBulkDeleteView.as_view(),
+        name="catalog-products-bulk-delete",
+    ),
+]
 
 PRODUCT_ROUTES = [
     path("shop/products/", views.ProductListCreateView.as_view(), name="catalog-products-list"),

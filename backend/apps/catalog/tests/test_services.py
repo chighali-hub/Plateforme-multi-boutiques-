@@ -1,4 +1,4 @@
-"""Regles metier du catalogue, sans HTTP (services des categories)."""
+"""Regles metier du catalogue, sans HTTP (categories, produits, actions groupees)."""
 
 from unittest import mock
 
@@ -329,3 +329,123 @@ def test_delete_product_removes_row_and_files_after_commit(
 
     assert not Product.objects.filter(pk=product_id).exists()
     assert _product_files(settings) == []
+
+
+# --- Actions groupees : bulk-publish ------------------------------------------------
+def test_bulk_publish_products_publishes_drafts_and_reports_others(shop, make_shop):
+    other = make_shop("ACTIVE")
+    to_publish = ProductFactory(shop=shop, status=Product.Status.DRAFT, published_at=None)
+    already = ProductFactory(shop=shop, status=Product.Status.PUBLISHED)
+    foreign = ProductFactory(shop=other, status=Product.Status.DRAFT, published_at=None)
+
+    result = services.bulk_publish_products(shop, [foreign.pk, to_publish.pk, already.pk, 999_999])
+
+    assert result == {
+        "published_ids": [to_publish.pk],
+        "skipped": [
+            {"id": foreign.pk, "reason": "NOT_FOUND"},
+            {"id": already.pk, "reason": "ALREADY_PUBLISHED"},
+            {"id": 999_999, "reason": "NOT_FOUND"},
+        ],
+    }
+    foreign.refresh_from_db()
+    assert foreign.status == Product.Status.DRAFT
+
+
+def test_bulk_publish_products_rolled_back_changes_nothing(shop):
+    product = ProductFactory(shop=shop, status=Product.Status.DRAFT, published_at=None)
+
+    with pytest.raises(RuntimeError), transaction.atomic():
+        services.bulk_publish_products(shop, [product.pk])
+        raise RuntimeError("annulation")
+
+    product.refresh_from_db()
+    assert (product.status, product.published_at) == (Product.Status.DRAFT, None)
+
+
+def test_bulk_publish_products_update_failure_changes_nothing(shop):
+    products = [
+        ProductFactory(shop=shop, status=Product.Status.DRAFT, published_at=None) for _ in range(2)
+    ]
+
+    with mock.patch("django.db.models.query.QuerySet.update", side_effect=RuntimeError("panne")):
+        with pytest.raises(RuntimeError):
+            services.bulk_publish_products(shop, [p.pk for p in products])
+
+    assert Product.objects.filter(shop=shop, status=Product.Status.DRAFT).count() == 2
+
+
+# --- Actions groupees : bulk-update et bulk-delete (traitement partiel) -------------
+def test_bulk_update_products_ignores_other_shop_ids(shop, make_shop):
+    other = make_shop("ACTIVE")
+    mine = ProductFactory(shop=shop, is_available=True)
+    foreign = ProductFactory(shop=other, is_available=True)
+
+    updated = services.bulk_update_products(
+        shop, [mine.pk, foreign.pk, 999_999], {"is_available": False}
+    )
+
+    assert updated == 1
+    foreign.refresh_from_db()
+    assert foreign.is_available is True
+
+
+def test_bulk_update_products_other_shop_category_raises(shop):
+    product = ProductFactory(shop=shop)
+    foreign_category = CategoryFactory()
+
+    with pytest.raises(ValidationError) as excinfo:
+        services.bulk_update_products(shop, [product.pk], {"category": foreign_category})
+
+    assert set(excinfo.value.detail) == {"category_id"}
+    product.refresh_from_db()
+    assert product.category_id != foreign_category.pk
+
+
+def test_bulk_update_products_ignores_status_and_other_keys(shop):
+    product = ProductFactory(shop=shop, status=Product.Status.DRAFT, published_at=None)
+
+    services.bulk_update_products(
+        shop, [product.pk], {"is_available": False, "status": "PUBLISHED", "shop": None}
+    )
+
+    product.refresh_from_db()
+    assert (product.status, product.published_at, product.shop) == ("DRAFT", None, shop)
+
+
+def test_bulk_update_products_rolled_back_changes_nothing(shop):
+    product = ProductFactory(shop=shop, is_available=True)
+
+    with pytest.raises(RuntimeError), transaction.atomic():
+        services.bulk_update_products(shop, [product.pk], {"is_available": False})
+        raise RuntimeError("annulation")
+
+    product.refresh_from_db()
+    assert product.is_available is True
+
+
+def test_bulk_delete_products_counts_only_own_products(shop, make_shop):
+    other = make_shop("ACTIVE")
+    mine = ProductFactory.create_batch(2, shop=shop)
+    foreign = ProductFactory(shop=other)
+
+    deleted = services.bulk_delete_products(shop, [mine[0].pk, foreign.pk, mine[1].pk, 999_999])
+
+    assert deleted == 2
+    assert Product.objects.filter(pk=foreign.pk).exists()
+
+
+def test_bulk_delete_products_rolled_back_deletes_nothing(
+    shop, image_file, django_capture_on_commit_callbacks
+):
+    product = _create(shop, image_file)
+    names = [product.image.name, product.thumbnail.name]
+
+    with django_capture_on_commit_callbacks(execute=True) as callbacks:
+        with pytest.raises(RuntimeError), transaction.atomic():
+            services.bulk_delete_products(shop, [product.pk])
+            raise RuntimeError("annulation")
+
+    assert callbacks == []
+    assert Product.objects.filter(pk=product.pk).exists()
+    assert all(default_storage.exists(name) for name in names)

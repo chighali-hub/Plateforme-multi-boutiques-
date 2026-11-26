@@ -11,7 +11,13 @@ from rest_framework import serializers
 from apps.accounts.serializers import ImageUploadField
 
 from .models import PRODUCT_PRICE_MAX, PRODUCT_PRICE_MIN, Category, Product
-from .services import PRODUCT_CATEGORY_UNKNOWN
+from .services import (
+    BULK_MAX_IDS,
+    BULK_UPDATE_NOTHING,
+    PRODUCT_CATEGORY_UNKNOWN,
+    SKIP_ALREADY_PUBLISHED,
+    SKIP_NOT_FOUND,
+)
 
 CATEGORY_NAME_MAX_LENGTH = 60
 # Ordre d'affichage : positif, dans la plage d'un smallint PostgreSQL.
@@ -111,6 +117,19 @@ class OptionalBooleanField(serializers.BooleanField):
     default_empty_html = serializers.empty
 
 
+def _shop_category(shop, value: int | None) -> Category | None:
+    """Categorie de la boutique ; inexistante ou d'une autre boutique : meme erreur.
+
+    Partagee par le POST/PATCH unitaire et par bulk-update.
+    """
+    if value is None:
+        return None
+    category = Category.objects.filter(shop=shop, pk=value).first()
+    if category is None:
+        raise serializers.ValidationError(PRODUCT_CATEGORY_UNKNOWN)
+    return category
+
+
 class ProductWriteSerializer(serializers.Serializer):
     """Corps de POST (multipart) et de PATCH (multipart, ou JSON sans image).
 
@@ -139,13 +158,7 @@ class ProductWriteSerializer(serializers.Serializer):
     is_available = OptionalBooleanField(required=False)
 
     def validate_category_id(self, value: int | None) -> Category | None:
-        """Categorie de la boutique ; inexistante ou d'une autre boutique : meme erreur."""
-        if value is None:
-            return None
-        category = Category.objects.filter(shop=self.context["shop"], pk=value).first()
-        if category is None:
-            raise serializers.ValidationError(PRODUCT_CATEGORY_UNKNOWN)
-        return category
+        return _shop_category(self.context["shop"], value)
 
     def validate(self, attrs: dict) -> dict:
         if "category_id" in attrs:
@@ -155,3 +168,62 @@ class ProductWriteSerializer(serializers.Serializer):
     def product_fields(self) -> dict:
         """Champs du produit, sans le fichier image."""
         return {name: value for name, value in self.validated_data.items() if name != "image"}
+
+
+# --- Actions groupees -------------------------------------------------------------
+class BulkIdsSerializer(serializers.Serializer):
+    """`ids` : 1 a 1 000 entiers strictement positifs, dedoublonnes (ordre conserve)."""
+
+    ids = serializers.ListField(
+        child=serializers.IntegerField(min_value=1),
+        allow_empty=False,
+        max_length=BULK_MAX_IDS,
+    )
+
+    def validate_ids(self, value: list[int]) -> list[int]:
+        return list(dict.fromkeys(value))
+
+
+class BulkSkippedSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    reason = serializers.ChoiceField(choices=[SKIP_NOT_FOUND, SKIP_ALREADY_PUBLISHED])
+
+
+class BulkPublishResultSerializer(serializers.Serializer):
+    """Reponse de bulk-publish (03-reference-api.md section 6)."""
+
+    published_ids = serializers.ListField(child=serializers.IntegerField())
+    skipped = BulkSkippedSerializer(many=True)
+
+
+class BulkUpdateSerializer(BulkIdsSerializer):
+    """bulk-update : `ids` + au moins un champ parmi `category_id` et `is_available`.
+
+    `category_id` : entier (categorie de la boutique en contexte) ou `null` (sans
+    categorie) ; absent, la categorie ne change pas.
+    """
+
+    category_id = serializers.IntegerField(required=False, allow_null=True)
+    is_available = serializers.BooleanField(required=False)
+
+    def validate_category_id(self, value: int | None) -> Category | None:
+        return _shop_category(self.context["shop"], value)
+
+    def validate(self, attrs: dict) -> dict:
+        if "category_id" not in attrs and "is_available" not in attrs:
+            raise serializers.ValidationError({"non_field_errors": [BULK_UPDATE_NOTHING]})
+        if "category_id" in attrs:
+            attrs["category"] = attrs.pop("category_id")
+        return attrs
+
+    def product_fields(self) -> dict:
+        """Champs a modifier, sans `ids`."""
+        return {name: value for name, value in self.validated_data.items() if name != "ids"}
+
+
+class BulkUpdateResultSerializer(serializers.Serializer):
+    updated_count = serializers.IntegerField()
+
+
+class BulkDeleteResultSerializer(serializers.Serializer):
+    deleted_count = serializers.IntegerField()

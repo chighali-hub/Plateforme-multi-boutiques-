@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: plateforme-multi-boutiques\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-26 17:35+0000\n"
+"POT-Creation-Date: 2026-11-26 19:00+0000\n"
 "PO-Revision-Date: 2026-11-21 14:02+0000\n"
 "Last-Translator: \n"
 "Language-Team: ar\n"
@@ -138,6 +138,9 @@ msgstr "أدخل اسمًا واحدًا على الأقل، بالفرنسية 
 
 msgid "Une catégorie porte déjà ce nom dans votre boutique."
 msgstr "توجد فئة بهذا الاسم في متجرك بالفعل."
+
+msgid "Indiquez au moins un champ à modifier : category_id ou is_available."
+msgstr "حدّد حقلًا واحدًا على الأقل لتعديله: category_id أو is_available."
 
 msgid "Opération impossible."
 msgstr "لا يمكن إجراء هذه العملية."

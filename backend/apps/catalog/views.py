@@ -233,3 +233,70 @@ class ProductDetailView(APIView):
     def delete(self, request, pk: int):
         services.delete_product(_get_product(request, pk))
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+# --- Actions groupees -------------------------------------------------------------
+BULK_ERRORS = ("400 VALIDATION_ERROR", *SHOP_ERRORS, "405 METHOD_NOT_ALLOWED")
+
+
+class ProductBulkPublishView(APIView):
+    permission_classes = [IsShopOwner, ShopStateAllowed(ShopState.ACTIVE)]
+
+    @extend_schema(
+        tags=[TAG_PRODUCTS],
+        summary="Publier la sélection",
+        description="Publie les brouillons choisis (RG-35, liste 1 de l'import). Un identifiant "
+        "inexistant ou d'une autre boutique est renvoyé dans `skipped` avec la raison "
+        "`NOT_FOUND` ; un produit déjà publié avec `ALREADY_PUBLISHED`. `ids` : 1 à 1 000 "
+        "entiers, doublons ignorés ; les listes suivent l'ordre des `ids`.",
+        request=serializers.BulkIdsSerializer,
+        responses={200: serializers.BulkPublishResultSerializer, **error_responses(*BULK_ERRORS)},
+    )
+    def post(self, request):
+        serializer = serializers.BulkIdsSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        result = services.bulk_publish_products(request.shop, serializer.validated_data["ids"])
+        return Response(serializers.BulkPublishResultSerializer(result).data)
+
+
+class ProductBulkUpdateView(APIView):
+    permission_classes = [IsShopOwner, ShopStateAllowed(ShopState.ACTIVE)]
+
+    @extend_schema(
+        tags=[TAG_PRODUCTS],
+        summary="Modifier la sélection",
+        description="Change la catégorie (`category_id` : entier, ou `null` pour « sans "
+        "catégorie ») et/ou la disponibilité (`is_available`) des produits choisis ; au "
+        "moins un des deux champs. Les identifiants inexistants ou d'une autre boutique sont "
+        "ignorés et non comptés. `ids` : 1 à 1 000 entiers, doublons ignorés.",
+        request=serializers.BulkUpdateSerializer,
+        responses={200: serializers.BulkUpdateResultSerializer, **error_responses(*BULK_ERRORS)},
+    )
+    def post(self, request):
+        serializer = serializers.BulkUpdateSerializer(
+            data=request.data, context={"shop": request.shop}
+        )
+        serializer.is_valid(raise_exception=True)
+        updated = services.bulk_update_products(
+            request.shop, serializer.validated_data["ids"], serializer.product_fields()
+        )
+        return Response({"updated_count": updated})
+
+
+class ProductBulkDeleteView(APIView):
+    permission_classes = [IsShopOwner, ShopStateAllowed(ShopState.ACTIVE)]
+
+    @extend_schema(
+        tags=[TAG_PRODUCTS],
+        summary="Supprimer la sélection",
+        description="Suppression définitive des produits choisis et de leurs images ; les "
+        "commandes gardent leurs copies. Les identifiants inexistants ou d'une autre boutique "
+        "sont ignorés et non comptés. `ids` : 1 à 1 000 entiers, doublons ignorés.",
+        request=serializers.BulkIdsSerializer,
+        responses={200: serializers.BulkDeleteResultSerializer, **error_responses(*BULK_ERRORS)},
+    )
+    def post(self, request):
+        serializer = serializers.BulkIdsSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        deleted = services.bulk_delete_products(request.shop, serializer.validated_data["ids"])
+        return Response({"deleted_count": deleted})
