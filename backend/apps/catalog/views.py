@@ -5,7 +5,8 @@ Voir 03-reference-api.md section 6. Tous ces endpoints exigent l'etat ACTIVE
 """
 
 from django.shortcuts import get_object_or_404
-from drf_spectacular.utils import extend_schema
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import OpenApiParameter, extend_schema
 from rest_framework import status
 from rest_framework.generics import ListAPIView
 from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
@@ -17,6 +18,7 @@ from apps.core.permissions import IsShopOwner, ShopStateAllowed
 from apps.shops.models import ShopState
 
 from . import selectors, serializers, services
+from .filters import ProductFilterSet
 from .models import Category, Product
 
 TAG_CATEGORIES = "Boutique - Catégories"
@@ -124,20 +126,39 @@ class ProductListCreateView(ListAPIView):
     permission_classes = [IsShopOwner, ShopStateAllowed(ShopState.ACTIVE)]
     parser_classes = [MultiPartParser, FormParser, JSONParser]
     serializer_class = serializers.ProductSerializer
-    # Filtres, recherche et tri parametrable : etape suivante de la phase 5.
-    filter_backends: list = []
+    # Filtres stricts (400 sur une valeur invalide) ; tri compris (`ordering`).
+    filter_backends = [DjangoFilterBackend]
+    filterset_class = ProductFilterSet
 
     def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            # Generation du schema Swagger : aucune boutique connectee.
+            return Product.objects.none()
         return selectors.get_shop_products(self.request.shop)
 
     @extend_schema(
         tags=[TAG_PRODUCTS],
         summary="Mes produits",
-        description="Page de produits de la boutique, brouillons compris, du plus récent "
-        "au plus ancien.",
+        description="Page de produits de la boutique, brouillons compris. Les filtres se "
+        "combinent (ET logique) ; une valeur invalide renvoie 400 VALIDATION_ERROR. Tri par "
+        "défaut : du plus récent au plus ancien.",
+        parameters=[
+            OpenApiParameter(
+                "import_job",
+                int,
+                description="Identifiant d'un import (entier ≥ 1) : produits issus de cet import "
+                "(liste 1 : `?status=DRAFT&import_job=12`).",
+            ),
+            OpenApiParameter("min_price", int, description="Prix minimum, inclus (entier ≥ 0)."),
+            OpenApiParameter(
+                "max_price",
+                int,
+                description="Prix maximum, inclus (entier ≥ 0) ; `min_price > max_price` → 400.",
+            ),
+        ],
         responses={
             200: serializers.ProductSerializer(many=True),
-            **error_responses(*SHOP_ERRORS, "404 NOT_FOUND"),
+            **error_responses("400 VALIDATION_ERROR", *SHOP_ERRORS, "404 NOT_FOUND"),
         },
     )
     def get(self, request, *args, **kwargs):
