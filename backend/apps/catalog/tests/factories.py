@@ -1,4 +1,5 @@
 import factory
+from django.utils import timezone
 
 from apps.catalog.models import Category, ImportErrorRow, ImportJob, Product
 from apps.shops.tests.factories import ShopFactory
@@ -26,6 +27,11 @@ class ProductFactory(factory.django.DjangoModelFactory):
     thumbnail = "products/2026/01/thumb.webp"
     status = Product.Status.PUBLISHED
     is_available = True
+    # Coherent avec RG-31 et le service : un produit publie a une date de publication,
+    # un brouillon n'en a pas. Une valeur passee explicitement par le test est conservee.
+    published_at = factory.LazyAttribute(
+        lambda product: timezone.now() if product.status == Product.Status.PUBLISHED else None
+    )
 
 
 class ImportJobFactory(factory.django.DjangoModelFactory):
