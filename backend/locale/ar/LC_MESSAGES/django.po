@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: plateforme-multi-boutiques\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-24 10:22+0000\n"
+"POT-Creation-Date: 2026-11-26 19:00+0000\n"
 "PO-Revision-Date: 2026-11-21 14:02+0000\n"
 "Last-Translator: \n"
 "Language-Team: ar\n"
@@ -129,6 +129,18 @@ msgstr "سطر استيراد به خطأ"
 
 msgid "lignes d'import en erreur"
 msgstr "أسطر استيراد بها أخطاء"
+
+msgid "Cette catégorie n'existe pas dans votre boutique."
+msgstr "هذه الفئة غير موجودة في متجرك."
+
+msgid "Renseignez au moins un nom, en français ou en arabe."
+msgstr "أدخل اسمًا واحدًا على الأقل، بالفرنسية أو بالعربية."
+
+msgid "Une catégorie porte déjà ce nom dans votre boutique."
+msgstr "توجد فئة بهذا الاسم في متجرك بالفعل."
+
+msgid "Indiquez au moins un champ à modifier : category_id ou is_available."
+msgstr "حدّد حقلًا واحدًا على الأقل لتعديله: category_id أو is_available."
 
 msgid "Opération impossible."
 msgstr "لا يمكن إجراء هذه العملية."

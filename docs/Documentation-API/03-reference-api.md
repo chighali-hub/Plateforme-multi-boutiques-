@@ -726,12 +726,12 @@ Objet `Category` :
 
 | Méthode | Chemin | Corps | Réponse |
 |---|---|---|---|
-| GET | `/shop/categories/` | — | **200** `[Category]` triées par `sort_order` puis `name_fr` (non paginé) |
+| GET | `/shop/categories/` | — | **200** `[Category]` triées par `sort_order`, puis `name_fr`, puis `id` (non paginé) |
 | POST | `/shop/categories/` | `{"name_fr": "Voiles", "name_ar": "خمارات", "sort_order": 1}` | **201** `Category` |
 | PATCH | `/shop/categories/{id}/` | champs à modifier | **200** `Category` |
 | DELETE | `/shop/categories/{id}/` | — | **204** (les produits deviennent sans catégorie, RG-32) |
 
-Règles : au moins un nom parmi `name_fr`/`name_ar`, 60 caractères max, unicité insensible à la casse dans la boutique, 100 catégories maximum.
+Règles : noms débarrassés des espaces de début et de fin ; au moins un nom parmi `name_fr`/`name_ar` (vérifié aussi après un `PATCH`, sinon `400` dans `details.non_field_errors`) ; 60 caractères max ; unicité insensible à la casse dans la boutique, pour `name_fr` et pour `name_ar` séparément (`400` sur le champ concerné) ; `sort_order` entier de 0 à 32 767 ; 100 catégories maximum (`409 LIMIT_REACHED`, `{"limit": 100}`).
 
 ---
 
@@ -762,15 +762,17 @@ Règles : au moins un nom parmi `name_fr`/`name_ar`, 60 caractères max, unicit�
 
 | Paramètre | Type | Description |
 |---|---|---|
-| `search` | texte | Recherche dans les noms et descriptions (FR et AR), insensible à la casse et aux accents |
-| `category` | entier | Identifiant de catégorie |
+| `search` | texte (100 caractères max) | Recherche dans les noms et descriptions (FR et AR), insensible à la casse et aux accents ; chaque mot (5 au maximum, mots d'une lettre ignorés) doit être trouvé |
+| `category` | entier | Identifiant d'une catégorie de la boutique ; inexistante ou d'une autre boutique → `400` |
 | `uncategorized` | `true` | Produits sans catégorie |
 | `status` | `DRAFT` / `PUBLISHED` | |
 | `is_available` | `true` / `false` | |
 | `source` | `MANUAL` / `IMPORT` | |
-| `import_job` | entier | Produits issus d'un import (liste 1 : `?status=DRAFT&import_job=12`) |
+| `import_job` | entier ≥ 1 | Produits issus d'un import (liste 1 : `?status=DRAFT&import_job=12`) ; l'import d'une autre boutique donne une liste vide |
 | `min_price`, `max_price` | entier ≥ 0 | Bornes incluses ; `min_price > max_price` → `400` |
 | `ordering` | `created_at`, `-created_at` (défaut), `price`, `-price`, `name_fr`, `-name_fr` | |
+
+Les filtres se combinent (ET logique). Une valeur invalide renvoie `400 VALIDATION_ERROR` sur le paramètre ; un paramètre vide (`?status=`) est ignoré ; `category` et `uncategorized=true` ensemble donnent une liste vide. Le tri utilise toujours `id` (même sens) comme second critère.
 
 **200** : page de `Product`.
 
@@ -781,7 +783,7 @@ Règles : au moins un nom parmi `name_fr`/`name_ar`, 60 caractères max, unicit�
 | `name_fr` / `name_ar` | au moins un | 150 caractères max |
 | `description_fr`, `description_ar` | non | 2 000 caractères max |
 | `price` | oui | Entier de 1 à 100 000 000 |
-| `category_id` | non | Catégorie **de la boutique** |
+| `category_id` | non | Catégorie **de la boutique** ; une catégorie inexistante ou d'une autre boutique donne la même erreur `400` sur `category_id` |
 | `image` | oui | JPEG/PNG/WebP, 5 Mo max |
 | `status` | non | `PUBLISHED` (défaut) ou `DRAFT` |
 | `is_available` | non | Défaut `true` |
@@ -789,7 +791,7 @@ Règles : au moins un nom parmi `name_fr`/`name_ar`, 60 caractères max, unicit�
 **201** : `Product`. **Erreurs** : `400 VALIDATION_ERROR`, `409 LIMIT_REACHED` (5 000 produits), `413 FILE_TOO_LARGE`.
 
 ### `GET /shop/products/{id}/` · `PATCH /shop/products/{id}/` 📎 · `DELETE /shop/products/{id}/`
-- `PATCH` : mêmes champs que `POST`, tous facultatifs. Passer `status` de `DRAFT` à `PUBLISHED` remplit `published_at`. JSON accepté si aucune image n'est envoyée.
+- `PATCH` : mêmes champs que `POST`, tous facultatifs. Passer `status` de `DRAFT` à `PUBLISHED` remplit `published_at` ; un produit qui reste publié garde sa date ; repasser en `DRAFT` conserve `published_at` (il sera remis à jour à la prochaine publication). JSON accepté si aucune image n'est envoyée ; `category_id: null` (ou vide en multipart) retire la catégorie.
 - `DELETE` : **204**. Le produit disparaît du panier des clients lors du prochain devis (`cart/quote`).
 - Un produit d'une autre boutique renvoie `404 NOT_FOUND`.
 
@@ -800,7 +802,7 @@ Règles : au moins un nom parmi `name_fr`/`name_ar`, 60 caractères max, unicit�
 {"ids": [120, 121, 122]}
 ```
 
-`ids` : 1 à 1 000 identifiants.
+`ids` : 1 à 1 000 entiers strictement positifs ; les doublons sont ignorés. Les listes `published_ids` et `skipped` suivent l'ordre des `ids` reçus.
 
 **200**
 ```json
@@ -814,6 +816,7 @@ Raisons possibles : `NOT_FOUND` (inexistant ou d'une autre boutique), `ALREADY_P
 
 ### `POST /shop/products/bulk-update/` 🔒 SHOP
 Actions groupées. Au moins un champ parmi `category_id` (entier ou `null` pour « sans catégorie ») et `is_available`.
+Le statut et `published_at` ne changent pas. Les identifiants inexistants ou d'une autre boutique sont ignorés, sans distinction ; `updated_count` compte les produits de la boutique trouvés (y compris ceux dont la valeur était déjà identique), `0` si aucun. Les doublons de `ids` sont ignorés.
 
 ```json
 {"ids": [120, 121], "category_id": 4, "is_available": true}
@@ -828,6 +831,7 @@ Actions groupées. Au moins un champ parmi `category_id` (entier ou `null` pour 
 ```
 
 **200** `{"deleted_count": 2}`
+Les identifiants inexistants ou d'une autre boutique sont ignorés, sans distinction ; `deleted_count` compte uniquement les produits de la boutique supprimés (`0` si aucun). Les lignes de commande gardent leurs copies (`product_id` passe à `NULL`) et les images sont supprimées après la validation de la transaction.
 
 ---
 

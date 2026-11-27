@@ -219,7 +219,7 @@ Contrainte : `UNIQUE (shop_id, bank_name, payment_code)`. Maximum **10** banques
 | `shop_id` | bigint | FK → `shops_shop.id`, ON DELETE CASCADE, NOT NULL | |
 | `name_fr` | varchar(60) | NOT NULL, défaut `''` | |
 | `name_ar` | varchar(60) | NOT NULL, défaut `''` | |
-| `sort_order` | smallint | NOT NULL, défaut 0 | |
+| `sort_order` | smallint | NOT NULL, défaut 0 | 0 à 32 767 (validé par le serializer) |
 | `created_at` | timestamptz | NOT NULL | |
 
 Contraintes :
@@ -249,7 +249,7 @@ Maximum **100** catégories par boutique.
 | `import_job_id` | bigint | FK → `catalog_import_job.id`, ON DELETE SET NULL, NULL | Import d'origine |
 | `search_text_fr` | text | NOT NULL, défaut `''` | `normaliser(name_fr ou name_ar + description_fr)` |
 | `search_text_ar` | text | NOT NULL, défaut `''` | `normaliser(name_ar ou name_fr + description_ar)` |
-| `published_at` | timestamptz | NULL | Rempli au passage en `PUBLISHED` |
+| `published_at` | timestamptz | NULL | Rempli à chaque passage en `PUBLISHED` ; conservé si le produit repasse en `DRAFT` |
 | `created_at` | timestamptz | NOT NULL | |
 | `updated_at` | timestamptz | NOT NULL | |
 
